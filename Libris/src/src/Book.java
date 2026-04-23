@@ -31,6 +31,9 @@ public class Book extends LibraryItem implements Borrowable, Searchable, Reviewa
 
 
 	public void setPageCount(int pageCount) {	//setter for pageCount
+		if(pageCount<=0) {
+			throw new IllegalArgumentException("Page count must be positive.");
+		}
 		this.pageCount = pageCount;
 	}
 
@@ -71,6 +74,10 @@ public class Book extends LibraryItem implements Borrowable, Searchable, Reviewa
 	public void returnItem() {	//Overridden method returnItem from interface Borrowable
 		System.out.println("Book returned: " + getTitle());
 		
+	}
+	@Override
+	public String toString() {
+		return "Book{" +super.toString()+ ",isbn: "+isbn+ ", pages: "+pageCount+ ", genre: "+genre+"}";
 	}
 
 }

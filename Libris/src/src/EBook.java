@@ -25,6 +25,9 @@ public class EBook extends LibraryItem implements Searchable, Reviewable {	//Con
 	}
 
 	public void setFileSize(double fileSize) {	//setter for file size
+		if(fileSize<=0) {
+			throw new IllegalArgumentException("File size must be positive.");
+		}
 		this.fileSize = fileSize;
 	}
 
@@ -41,6 +44,10 @@ public class EBook extends LibraryItem implements Searchable, Reviewable {	//Con
 	@Override
 	public void search(String query) {	//Overridden method search from iterface Searchable
 		System.out.println("Searching in digital catalog for: " + query);
+	}
+	@Override
+	public String toString() {
+		return "EBook{"+super.toString()+", format: "+fileFormat+ ", size: "+fileSize+ "MB}";
 	}
 	
 }

@@ -30,5 +30,10 @@ public class Admin extends User{	//Concrede class Admin extended from superclass
         return false;
 	}
 	
+	@Override
+	public String toString() {
+		return "Admin{"+super.toString()+ "}";
+	}
+	
 	
 }

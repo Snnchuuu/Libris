@@ -47,6 +47,7 @@ public class LibraryManager {	//Start of class LibraryManager
 	}
 	
 	public void returnMaterial(BorrowRecord record) {	//Method for returning the borrowed materials
+	    record.setReturnDate(java.time.LocalDate.now());
 	    
 	    // Use the logic we wrote in BorrowRecord to find delay
 	    int daysDelayed = record.calculateDaysDelayed();
@@ -54,23 +55,23 @@ public class LibraryManager {	//Start of class LibraryManager
 	    if (daysDelayed > 0) {
 	    	
 	        Member member = record.getMember();
-	        
 	        LibraryItem item = record.getItem();
-	        
 	        
 	        //Calculating Penalty: item type + member's total delay history
 	        double penaltyAmount = item.calculatePenalty(daysDelayed, member.getTotalDelays());
-	        
 	        
 	        // Apply the penalty to member's account
 	        member.setBalance(member.getBalance() + penaltyAmount);
 	        member.setTotalDelays(member.getTotalDelays() + 1);
 	        
-	        
 	        System.out.println("LATE RETURN: " + daysDelayed + " days late. Fine: " + penaltyAmount + " TL.");
 	    } else {
 	    	//If the material that is borrowed is back on time:
 	        System.out.println("RETURNED ON TIME: No penalty.");
+	    }
+	    
+	    if(record.getItem() instanceof Borrowable) {
+	    	((Borrowable)record.getItem()).returnItem();
 	    }
 	}
 }

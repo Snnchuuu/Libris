@@ -20,6 +20,9 @@ public abstract class LibraryItem {	//Starting point of abstract class LibraryIt
 		return id;
 	}
 	public void setId(int id) {	//Setter for id
+		if(id<0) {
+			throw new IllegalArgumentException("ID cannot be negative");
+		}
 		this.id = id;
 	}
 	public String getTitle() {	//Getter for title
@@ -38,12 +41,18 @@ public abstract class LibraryItem {	//Starting point of abstract class LibraryIt
 		return publicationYear;
 	}
 	public void setPublicationYear(int publicationYear) {	//Setter for publicationYear
+		if(publicationYear<0 || publicationYear > java.time.LocalDate.now().getYear()) {
+			throw new IllegalArgumentException("Invalid publication year: "+publicationYear); 
+		}
 		this.publicationYear = publicationYear;
 	}
 	public int getCopyCount() {	//Getter for copyCount
 		return copyCount;
 	}
 	public void setCopyCount(int copyCount) {	//Setter for copyCount
+		if(copyCount<0) {
+			throw new IllegalArgumentException("Copy count cannot be negative.");
+		}
 		this.copyCount = copyCount;
 	}
 	public String getStatus() {	//Getter for status
@@ -54,5 +63,10 @@ public abstract class LibraryItem {	//Starting point of abstract class LibraryIt
 	}
 	//Will be overridden with polymorphism
     public abstract double calculatePenalty(int daysDelayed, int totalPreviousDelays);
+    
+    @Override
+    public String toString() { //id title author year copies status
+    	return "id: " +id+ ", title: "+title+ ", year: "+publicationYear+ ", copies: "+copyCount+", status: "+status; 
+    }
     
 }
