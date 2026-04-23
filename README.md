@@ -38,6 +38,6 @@ Reservation System: A queue-based system for borrowed items with automated notif
 
 Personalized Recommendations: Suggests books based on user history and ratings.
 
-Role-Based Access: * Admin: Manage inventory, track members, and view statistics.
+Role-Based Access: Admin: Manage inventory, track members, and view statistics.
 
 Member: Search the catalog, borrow/return items, and manage personal reading lists.
