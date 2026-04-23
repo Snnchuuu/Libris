@@ -40,6 +40,9 @@ public class Reservation {//Starting point of the class Reservation
 	}
 
 	public void setReservationId(int reservationId) {	//setter for reservationId
+		if(reservationId<=0) {
+			throw new IllegalArgumentException("Reservation ID must be positive.");
+		}
 		this.reservationId = reservationId;
 	}
 
@@ -63,4 +66,8 @@ public class Reservation {//Starting point of the class Reservation
 		return "Pending".equals(this.status);
 	}
 	
+	@Override
+	public String toString() {
+		return "Reservation{id: "+reservationId+ ", member: "+member.getName()+ ", item: "+item.getTitle()+ ", date: "+requestDate+ ", status: "+status+ "}";
+	}
 }

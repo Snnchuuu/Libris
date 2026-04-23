@@ -53,5 +53,10 @@ public class Member extends User{	//Concrede class Member extended from supercla
 		return false;
 	}
 	
+	@Override
+	public String toString() {
+		return "Member{"+super.toString()+ ", balance: "+balance+ "TL, Total Delays: "+totalDelays+ "}";
+	}
+	
 
 }

@@ -36,6 +36,9 @@ public class BorrowRecord {	//Starting point of class BorrowRecord
 	}
 
 	public void setRecordId(int recordId) {	//setter for RecordId
+		if(recordId<0) {
+			throw new IllegalArgumentException("Record ID must be positive.");
+		}
 		this.recordId = recordId;
 	}
 
@@ -52,7 +55,9 @@ public class BorrowRecord {	//Starting point of class BorrowRecord
 	}
 
 	public void setBorrowDate(LocalDate borrowDate) {	//setter for borrowDate
+		long loanPeriod = ChronoUnit.DAYS.between(this.borrowDate, this.dueDate);
 		this.borrowDate = borrowDate;
+		this.dueDate = borrowDate.plusDays(loanPeriod);
 	}
 
 	public LocalDate getDueDate() {	//getter for dueDate
@@ -94,6 +99,11 @@ public class BorrowRecord {	//Starting point of class BorrowRecord
 		}
 		
 		return 0;	//no delay if neither condition is met
+	}
+	
+	@Override
+	public String toString() {
+		return "BorrowRecord{record id: "+recordId+ ", member: "+member.getName()+ ", item: "+item.getTitle()+  ", borrow date: "+borrowDate+ ", due date: "+dueDate+ ", returned: "+isReturned+ "}";
 	}
 	
 	

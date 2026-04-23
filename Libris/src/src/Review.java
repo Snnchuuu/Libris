@@ -59,14 +59,11 @@ public class Review {
 	}
 
 
-	public void setRating(int rating) {	//setter for item
-		
-		if(rating >= 1 && rating <= 5) {	//If the rating stays within 1-5 range
-			this.rating = rating;
-		}else {	//If rating is wrong rating is defaulted to 1 and error message is thrown to user
-			this.rating = 1;
-			System.err.println("Warning: Rating must be between 1 and 5");
+	public void setRating(int rating) {	//setter for item		
+		if(rating<1 || rating>5){	
+			throw new IllegalArgumentException("Rating must be between 1 and 5. Given: "+rating);
 		}
+		this.rating = rating;
 	}
 		
 	
@@ -89,5 +86,8 @@ public class Review {
 		this.reviewDate = reviewDate;
 	}
 	
-	
+	@Override
+	public String toString() {
+		return "Review{id: "+reviewId+ ", user: "+user.getName()+ ", item: "+item.getTitle()+ ", rating: "+rating+ "/5, comment: "+comment+ ", date: "+reviewDate+ "}";
+	}
 }

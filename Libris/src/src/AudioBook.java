@@ -17,6 +17,9 @@ public class AudioBook extends LibraryItem implements Searchable, Reviewable{	//
 	}
 
 	public void setDuration(int duration) {	//setter for duration
+		if(duration<=0) {
+			throw new IllegalArgumentException("Duration must be pozitive.");
+		}
 		this.duration = duration;
 	}
 
@@ -41,6 +44,10 @@ public class AudioBook extends LibraryItem implements Searchable, Reviewable{	//
 	@Override
 	public void search(String query) {	//Overridden method from interface Searchable
 		System.out.println("Searching audio library for title/narrator: " + query);
+	}
+	@Override
+	public String toString() {
+		return "AudioBook{"+super.toString()+ ", duration: "+duration+"min, narrator: "+narrator+ "}";
 	}
 
 }

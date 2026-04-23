@@ -21,6 +21,9 @@ public abstract class User {	//Abstract Class User
 	}
 	
 	public void setId(int id) {	//setter for id
+		if(id<0) {
+			throw new IllegalArgumentException("User ID cannot be negative.");
+		}
 		this.id = id;
 	}
 
@@ -59,5 +62,10 @@ public abstract class User {	//Abstract Class User
 	public abstract void showDashBoard();	//Abstract method showDashBoard. Will be overriden in concrede classes
 	
 	public abstract boolean login(String email, String password);	//For login system
+	
+	@Override
+	public String toString() {
+		return "id: "+id+ ", name: "+name+ ", email: "+email+ ", role: "+role;	
+	}
 
 }

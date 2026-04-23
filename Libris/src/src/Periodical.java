@@ -17,6 +17,9 @@ public class Periodical extends LibraryItem implements Borrowable, Searchable, R
 	}
 
 	public void setIssueNumber(int issueNumber) {	//setter for isNumber
+		if(issueNumber<=0) {
+			throw new IllegalArgumentException("Issue number must be positive.");
+		}
 		this.issueNumber = issueNumber;
 	}
 
@@ -63,6 +66,10 @@ public class Periodical extends LibraryItem implements Borrowable, Searchable, R
 	public void returnItem() {	//Overridden method returnItem from interface Borrowable
 		System.out.println("Periodical issue #" + issueNumber + " returned.");
 		
+	}
+	@Override
+	public String toString() {
+		return "Periodical{"+super.toString()+ ", issue: #"+issueNumber+ ", period: "+period+ "}";
 	}
 
 }
