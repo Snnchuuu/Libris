@@ -1,5 +1,5 @@
 📚 Libris
-Libris is a web-based library management system developed for the CENG106 Object-Oriented Programming course. The project focuses on managing book inventories, member records, and the lending/return processes using robust OOP principles.
+Libris is a comprehensive, web-based library management platform designed to streamline the administration of modern libraries. It provides an integrated ecosystem for managing diverse media inventories, member relations, and complex circulation workflows through a robust and scalable architecture.
 
 🛠️ Tech Stack
 Language: Java
