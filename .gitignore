@@ -1,0 +1,31 @@
+# --- Java & Maven ---
+target/
+*.class
+*.jar
+*.war
+*.ear
+
+# --- Vaadin Specific ---
+node_modules/
+frontend/generated/
+package-lock.json
+package.json
+vite.generated.ts
+vite.config.ts.timestamp-*
+types.d.ts
+node/
+
+# --- IDEs (IntelliJ, Eclipse, VS Code) ---
+.idea/
+*.iml
+*.iws
+.settings/
+.classpath
+.project
+.factorypath
+bin/
+.vscode/
+
+# --- OS Specific ---
+.DS_Store
+Thumbs.db
