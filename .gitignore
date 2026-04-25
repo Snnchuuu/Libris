@@ -13,6 +13,7 @@ package.json
 vite.generated.ts
 vite.config.ts.timestamp-*
 types.d.ts
+node/
 
 # --- IDEs (IntelliJ, Eclipse, VS Code) ---
 .idea/
