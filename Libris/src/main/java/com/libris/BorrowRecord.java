@@ -13,7 +13,7 @@ public class BorrowRecord {	//Starting point of class BorrowRecord
 	private boolean isReturned;	//Status flag for easy checking
 	
 	//Constructor for class BorrowRecord
-	public BorrowRecord(Member member, int recordId, LibraryItem item, LocalDate returnDate, int loanPeriodDays) {
+	public BorrowRecord(Member member, int recordId, LibraryItem item, int loanPeriodDays) {
 		setRecordId(recordId);
 		this.member = member;
 		this.item = item;
