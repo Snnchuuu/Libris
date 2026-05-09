@@ -6,17 +6,25 @@ import java.sql.DriverManager;	//used for database driver management
 import java.sql.SQLException;	//used for database exceptions
 
 public class DatabaseManager {
-    // load the .env file
-	private static final Dotenv dotenv = Dotenv.load();
+    private static String URL = "jdbc:mysql://localhost:3306/libris_db";
+    private static String USER = "root";
+    private static String PASSWORD = "";
 
-  /*  // Use the informations in the .env file privately
-	private static final String URL = dotenv.get("DB_URL");
-	private static final String USER = dotenv.get("DB_USER");
-    private static final String PASSWORD = dotenv.get("DB_PASSWORD");
-    */
-	private static final String URL = "jdbc:mysql://localhost:3306/libris_db";
-	private static final String USER = "root";
-	private static final String PASSWORD = "";
+    static {
+        try {
+            // .env dosyasını yüklemeye çalış
+            Dotenv dotenv = Dotenv.configure().ignoreIfMissing().load();
+            
+            // Eğer dosya varsa ve içindeki değerler boş değilse onları kullan
+            if (dotenv.get("DB_URL") != null) URL = dotenv.get("DB_URL");
+            if (dotenv.get("DB_USER") != null) USER = dotenv.get("DB_USER");
+            if (dotenv.get("DB_PASSWORD") != null) PASSWORD = dotenv.get("DB_PASSWORD");
+            
+        } catch (Exception e) {
+            // Dosya yoksa hiçbir şey yapma, yukarıdaki varsayılanlarla devam et
+            System.out.println("Bilgi: .env dosyası bulunamadı, varsayılan ayarlarla bağlanılıyor.");
+        }
+    }
 
     public static Connection getConnection() throws SQLException {	//Method for getting connection informations
         try {
