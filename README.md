@@ -16,7 +16,7 @@ git clone -b email-feature https://github.com/Snnchuuu/Libris.git
 ```
 mysql -u root -p
 
-source schema.sql
+source Libris/src/main/java/com/libris/schema.sql
 ```
 
 ### Running the Project
