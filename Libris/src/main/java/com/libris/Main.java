@@ -10,8 +10,8 @@ public class Main {
  
         // Creating user objects for local testing
         Admin admin = new Admin(1, "Ahmet Yılmaz", "ahmet@libris.com", "admin123");
-        Member member1 = new Member(101, "Can Tekin", "can@mail.com", "pass123");
-        Member member2 = new Member(102, "Elif Demir", "elif@mail.com", "pass456");
+        Member member1 = new Member(2, "Can Tekin", "can@mail.com", "pass123");
+        Member member2 = new Member(3, "Elif Demir", "elif@mail.com", "pass456");
  
         // Creating material objects for local testing
         Book book1 = new Book(1, "Java Programming", "Deitel", 2024, 5, "Available", "123-456", 800, "Education");
