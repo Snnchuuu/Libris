@@ -1,9 +1,10 @@
 -- ============================================================
 -- Libris Library Management System - Database Schema
 -- ============================================================
--- Run this file once to set up all required tables in MySQL.
--- Make sure your database (e.g. 'libris_db') is created first.
--- ============================================================
+
+-- Database Initialization
+CREATE DATABASE IF NOT EXISTS libris_db;
+USE libris_db;
 
 -- -------------------------------------------------------
 -- TABLE: users
@@ -12,7 +13,7 @@
 CREATE TABLE IF NOT EXISTS users (
     user_id        INT AUTO_INCREMENT PRIMARY KEY,
     username       VARCHAR(100)   NOT NULL,
-    name 		   VARCHAR(150)   NOT NULL,
+    name           VARCHAR(150)   NOT NULL,
     email          VARCHAR(150)   NOT NULL UNIQUE,
     password       VARCHAR(255)   NOT NULL,          -- Store hashed passwords in production!
     role           ENUM('ADMIN', 'MEMBER') NOT NULL,
@@ -45,7 +46,7 @@ CREATE TABLE IF NOT EXISTS library_items (
     file_size          DOUBLE,
 
     -- AudioBook-specific fields
-    duration           INT,          -- Duration in minutes
+    duration           INT,           -- Duration in minutes
     narrator           VARCHAR(150),
 
     -- Periodical-specific fields
@@ -114,7 +115,7 @@ CREATE TABLE IF NOT EXISTS reviews (
 
 -- Admin user
 INSERT INTO users (username, name, email, password, role) VALUES
-('ahmetadmin', 'Ahmet Yılmaz', 'ahmet@libris.com', 'admin123', 'ADMIN');
+('ahmetadmin', 'Ahmet Yilmaz', 'ahmet@libris.com', 'admin123', 'ADMIN');
 
 -- Member users
 INSERT INTO users (username, name, email, password, role, balance, total_delays) VALUES
@@ -124,7 +125,7 @@ INSERT INTO users (username, name, email, password, role, balance, total_delays)
 -- Sample books
 INSERT INTO library_items (title, author, publication_year, copy_count, available_copies, status, item_type, isbn, page_count, genre) VALUES
 ('Java Programming', 'Deitel',                    2024, 5, 5, 'Available', 'BOOK', '123-456', 800, 'Education'),
-('Araba Sevdası',    'Recaizade Mahmut Ekrem',    1875, 3, 3, 'Available', 'BOOK', '456-789', 276, 'Novel');
+('Araba Sevdasi',    'Recaizade Mahmut Ekrem',    1875, 3, 3, 'Available', 'BOOK', '456-789', 276, 'Novel');
 
 -- Sample EBook
 INSERT INTO library_items (title, author, publication_year, copy_count, available_copies, status, item_type, file_format, file_size) VALUES
