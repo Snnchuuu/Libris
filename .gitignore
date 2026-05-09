@@ -30,3 +30,6 @@ bin/
 .DS_Store
 Thumbs.db
 /.metadata/
+
+# Sensitive data 
+.env
