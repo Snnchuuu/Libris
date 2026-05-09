@@ -1,5 +1,6 @@
 package com.libris;
 
+
 public class Periodical extends LibraryItem implements Borrowable, Searchable, Reviewable{	//Concrede class Periodical extended from superclass LibraryItem and implemented from interfaces Borrowable, Searchable and Reviewable
 	
 	private int issueNumber;	//The specific edition or sequence number of the periodical

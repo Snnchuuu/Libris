@@ -1,14 +1,15 @@
-// @ts-nocheck
 import { Debouncer } from '@polymer/polymer/lib/utils/debounce.js';
 import { timeOut, animationFrame } from '@polymer/polymer/lib/utils/async.js';
 import { Grid } from '@vaadin/grid/src/vaadin-grid.js';
+import { ItemCache } from '@vaadin/grid/src/vaadin-grid-data-provider-mixin.js';
 import { isFocusable } from '@vaadin/grid/src/vaadin-grid-active-item-mixin.js';
-import { GridFlowSelectionColumn } from "./vaadin-grid-flow-selection-column.js";
 
 (function () {
   const tryCatchWrapper = function (callback) {
     return window.Vaadin.Flow.tryCatchWrapper(callback, 'Vaadin Grid');
   };
+
+  let isItemCacheInitialized = false;
 
   window.Vaadin.Flow.gridConnector = {
     initLazy: (grid) =>
@@ -18,28 +19,53 @@ import { GridFlowSelectionColumn } from "./vaadin-grid-flow-selection-column.js"
           return;
         }
 
-        const dataProviderController = grid._dataProviderController;
+        // Make sure ItemCache patching is done only once, but delay it for when
+        // a server grid is initialized
+        if (!isItemCacheInitialized) {
+          isItemCacheInitialized = true;
+          ItemCache.prototype.ensureSubCacheForScaledIndexOriginal = ItemCache.prototype.ensureSubCacheForScaledIndex;
+          ItemCache.prototype.ensureSubCacheForScaledIndex = tryCatchWrapper(function (scaledIndex) {
+            if (!this.grid.$connector) {
+              this.ensureSubCacheForScaledIndexOriginal(scaledIndex);
+              return;
+            }
 
-        dataProviderController.ensureFlatIndexHierarchyOriginal = dataProviderController.ensureFlatIndexHierarchy;
-        dataProviderController.ensureFlatIndexHierarchy = tryCatchWrapper(function (flatIndex) {
-          const { item } = this.getFlatIndexContext(flatIndex);
-          if (!item || !this.isExpanded(item)) {
-            return;
-          }
+            const isCached = this.grid.$connector.hasCacheForParentKey(this.grid.getItemId(this.items[scaledIndex]));
+            if (isCached) {
+              // The sub-cache items are already in the connector's cache. Skip the debouncing process.
+              this.ensureSubCacheForScaledIndexOriginal(scaledIndex);
+            } else if (!this.itemCaches[scaledIndex]) {
+              // The items need to be fetched from the server.
+              this.grid.$connector.beforeEnsureSubCacheForScaledIndex(this, scaledIndex);
+            }
+          });
 
-          const isCached = grid.$connector.hasCacheForParentKey(grid.getItemId(item));
-          if (isCached) {
-            // The sub-cache items are already in the connector's cache. Skip the debouncing process.
-            this.ensureFlatIndexHierarchyOriginal(flatIndex);
-          } else {
-            grid.$connector.beforeEnsureFlatIndexHierarchy(flatIndex, item);
-          }
-        });
+          ItemCache.prototype.isLoadingOriginal = ItemCache.prototype.isLoading;
+          ItemCache.prototype.isLoading = tryCatchWrapper(function () {
+            if (!this.grid.$connector) {
+              return this.isLoadingOriginal();
+            }
 
-        dataProviderController.isLoadingOriginal = dataProviderController.isLoading;
-        dataProviderController.isLoading = tryCatchWrapper(function () {
-          return grid.$connector.hasEnsureSubCacheQueue() || this.isLoadingOriginal();
-        });
+            return this.grid.$connector.hasEnsureSubCacheQueue() || this.isLoadingOriginal();
+          });
+
+          ItemCache.prototype.getCacheByKey = tryCatchWrapper(function (key) {
+            // Start looking in this cache
+            for (let index in this.items) {
+              if (this.grid.getItemId(this.items[index]) === key) {
+                return this.itemCaches[index];
+              }
+            }
+            // Look through sub-caches
+            for (let index of Object.keys(this.itemCaches)) {
+              const cache = this.itemCaches[index].getCacheByKey(key);
+              if (cache) {
+                return cache;
+              }
+            }
+            return undefined;
+          });
+        }
 
         const rootPageCallbacks = {};
         const treePageCallbacks = {};
@@ -64,9 +90,6 @@ import { GridFlowSelectionColumn } from "./vaadin-grid-flow-selection-column.js"
         const root = 'null';
         lastRequestedRanges[root] = [0, 0];
 
-        let currentUpdateClearRange = null;
-        let currentUpdateSetRange = null;
-
         const validSelectionModes = ['SINGLE', 'NONE', 'MULTI'];
         let selectedKeys = {};
         let selectionMode = 'SINGLE';
@@ -76,27 +99,24 @@ import { GridFlowSelectionColumn } from "./vaadin-grid-flow-selection-column.js"
         grid.size = 0; // To avoid NaN here and there before we get proper data
         grid.itemIdPath = 'key';
 
-        function createEmptyItemFromKey(key) {
-          return { [grid.itemIdPath]: key };
-        }
-
         grid.$connector = {};
 
-        grid.$connector.hasCacheForParentKey = tryCatchWrapper((parentKey) => cache[parentKey]?.size !== undefined);
+        grid.$connector.hasCacheForParentKey = tryCatchWrapper((parentKey) => cache[parentKey] !== undefined && cache[parentKey].size !== undefined);
 
         grid.$connector.hasEnsureSubCacheQueue = tryCatchWrapper(() => ensureSubCacheQueue.length > 0);
 
         grid.$connector.hasParentRequestQueue = tryCatchWrapper(() => parentRequestQueue.length > 0);
 
         grid.$connector.hasRootRequestQueue = tryCatchWrapper(() => {
-          return Object.keys(rootPageCallbacks).length > 0 || !!rootRequestDebouncer?.isActive();
+          return Object.keys(rootPageCallbacks).length > 0 || (!!rootRequestDebouncer && rootRequestDebouncer.isActive());
         });
 
-        grid.$connector.beforeEnsureFlatIndexHierarchy = tryCatchWrapper(function (flatIndex, item) {
+        grid.$connector.beforeEnsureSubCacheForScaledIndex = tryCatchWrapper(function (targetCache, scaledIndex) {
           // add call to queue
           ensureSubCacheQueue.push({
-            flatIndex,
-            itemkey: grid.getItemId(item)
+            cache: targetCache,
+            scaledIndex: scaledIndex,
+            itemkey: grid.getItemId(targetCache.items[scaledIndex])
           });
 
           ensureSubCacheDebouncer = Debouncer.debounce(ensureSubCacheDebouncer, animationFrame, () => {
@@ -144,7 +164,7 @@ import { GridFlowSelectionColumn } from "./vaadin-grid-flow-selection-column.js"
             const itemToDeselect = items.shift();
             for (let i = 0; i < updatedSelectedItems.length; i++) {
               const selectedItem = updatedSelectedItems[i];
-              if (itemToDeselect?.key === selectedItem.key) {
+              if (itemToDeselect && itemToDeselect.key === selectedItem.key) {
                 updatedSelectedItems.splice(i, 1);
                 break;
               }
@@ -198,61 +218,48 @@ import { GridFlowSelectionColumn } from "./vaadin-grid-flow-selection-column.js"
         grid.$connector._getSameLevelPage = tryCatchWrapper(function (parentKey, currentCache, currentCacheItemIndex) {
           const currentParentKey = currentCache.parentItem ? grid.getItemId(currentCache.parentItem) : root;
           if (currentParentKey === parentKey) {
-            // Level match found, return the page number.
-            return Math.floor(currentCacheItemIndex / grid.pageSize);
+            // Level match found
+            return grid._getPageForIndex(currentCacheItemIndex);
           }
-          const { parentCache, parentCacheIndex } = currentCache;
+          const { parentCache } = currentCache;
           if (!parentCache) {
             // There is no parent cache to match level
             return null;
           }
+          const parentCacheItemIndex = Object.entries(parentCache.itemCaches).find(
+            ([index, cache]) => cache === currentCache
+          )[0];
           // Traverse the tree upwards until a match is found or the end is reached
-          return this._getSameLevelPage(parentKey, parentCache, parentCacheIndex);
+          return this._getSameLevelPage(parentKey, parentCache, parentCacheItemIndex);
         });
 
         grid.$connector.flushEnsureSubCache = tryCatchWrapper(function () {
           const pendingFetch = ensureSubCacheQueue.shift();
           if (pendingFetch) {
-            dataProviderController.ensureFlatIndexHierarchyOriginal(pendingFetch.flatIndex);
+            pendingFetch.cache.ensureSubCacheForScaledIndexOriginal(pendingFetch.scaledIndex);
             return true;
           }
           return false;
         });
 
-        grid.$connector.debounceRootRequest = tryCatchWrapper(function (page) {
-          const delay = grid._hasData ? rootRequestDelay : 0;
-
-          rootRequestDebouncer = Debouncer.debounce(rootRequestDebouncer, timeOut.after(delay), () => {
-            grid.$connector.fetchPage(
-              (firstIndex, size) => grid.$server.setRequestedRange(firstIndex, size),
-              page,
-              root
-            );
-          });
-        });
-
         grid.$connector.flushParentRequests = tryCatchWrapper(function () {
-          const pendingFetches = [];
-
-          parentRequestQueue.splice(0, parentRequestBatchMaxSize).forEach(({ parentKey, page }) => {
-            grid.$connector.fetchPage(
-              (firstIndex, size) => pendingFetches.push({ parentKey, firstIndex, size }),
-              page,
-              parentKey
-            );
-          });
+          let pendingFetches = parentRequestQueue.splice(0, parentRequestBatchMaxSize);
 
           if (pendingFetches.length) {
             grid.$server.setParentRequestedRanges(pendingFetches);
+            return true;
           }
+          return false;
         });
 
-        grid.$connector.debounceParentRequest = tryCatchWrapper(function (parentKey, page) {
-          // Remove any pending requests for the same parentKey.
-          parentRequestQueue = parentRequestQueue.filter((request) => request.parentKey !== parentKey);
-          // Add the new request to the queue.
-          parentRequestQueue.push({ parentKey, page });
-          // Debounce the request to avoid sending multiple requests for the same parentKey.
+        grid.$connector.beforeParentRequest = tryCatchWrapper(function (firstIndex, size, parentKey) {
+          // add request in queue
+          parentRequestQueue.push({
+            firstIndex: firstIndex,
+            size: size,
+            parentKey: parentKey
+          });
+
           parentRequestDebouncer = Debouncer.debounce(parentRequestDebouncer, timeOut.after(parentRequestDelay), () => {
             while (parentRequestQueue.length) {
               grid.$connector.flushParentRequests();
@@ -261,28 +268,24 @@ import { GridFlowSelectionColumn } from "./vaadin-grid-flow-selection-column.js"
         });
 
         grid.$connector.fetchPage = tryCatchWrapper(function (fetch, page, parentKey) {
-          // Adjust the requested page to be within the valid range in case
-          // the grid size has changed while fetchPage was debounced.
-          if (parentKey === root) {
-            page = Math.min(page, Math.floor((grid.size - 1) / grid.pageSize));
-          }
-
           // Determine what to fetch based on scroll position and not only
           // what grid asked for
-          const visibleRows = grid._getRenderedRows();
-          let start = visibleRows.length > 0 ? visibleRows[0].index : 0;
-          let end = visibleRows.length > 0 ? visibleRows[visibleRows.length - 1].index : 0;
 
           // The buffer size could be multiplied by some constant defined by the user,
           // if he needs to reduce the number of items sent to the Grid to improve performance
           // or to increase it to make Grid smoother when scrolling
+          const visibleRows = grid._getRenderedRows();
+          let start = visibleRows.length > 0 ? visibleRows[0].index : 0;
+          let end = visibleRows.length > 0 ? visibleRows[visibleRows.length - 1].index : 0;
           let buffer = end - start;
-          let firstNeededIndex = Math.max(0, start - buffer);
-          let lastNeededIndex = Math.min(end + buffer, grid._flatSize);
 
-          let pageRange = [null, null];
+          let firstNeededIndex = Math.max(0, start - buffer);
+          let lastNeededIndex = Math.min(end + buffer, grid._effectiveSize);
+
+          let firstNeededPage = page;
+          let lastNeededPage = page;
           for (let idx = firstNeededIndex; idx <= lastNeededIndex; idx++) {
-            const { cache, index } = dataProviderController.getFlatIndexContext(idx);
+            const { cache, scaledIndex } = grid._cache.getCacheAndIndex(idx);
             // Try to match level by going up in hierarchy. The page range should include
             // pages that contain either of the following:
             //   - visible items of the current cache
@@ -290,30 +293,26 @@ import { GridFlowSelectionColumn } from "./vaadin-grid-flow-selection-column.js"
             // If the parent items are not considered, Flow would remove the hidden parent
             // items from the current level cache. This can lead to an infinite loop when using
             // scrollToIndex feature.
-            const sameLevelPage = grid.$connector._getSameLevelPage(parentKey, cache, index);
+            const sameLevelPage = grid.$connector._getSameLevelPage(parentKey, cache, scaledIndex);
             if (sameLevelPage === null) {
               continue;
             }
-            pageRange[0] = Math.min(pageRange[0] ?? sameLevelPage, sameLevelPage);
-            pageRange[1] = Math.max(pageRange[1] ?? sameLevelPage, sameLevelPage);
+            firstNeededPage = Math.min(firstNeededPage, sameLevelPage);
+            lastNeededPage = Math.max(lastNeededPage, sameLevelPage);
           }
 
-          // When the viewport doesn't contain the requested page or it doesn't contain any items from
-          // the requested level at all, it means that the scroll position has changed while fetchPage
-          // was debounced. For example, it can happen if the user scrolls the grid to the bottom and
-          // then immediately back to the top. In this case, the request for the last page will be left
-          // hanging. To avoid this, as a workaround, we reset the range to only include the requested page
-          // to make sure all hanging requests are resolved. After that, the grid requests the first page
-          // or whatever in the viewport again.
-          if (pageRange.some((p) => p === null) || page < pageRange[0] || page > pageRange[1]) {
-            pageRange = [page, page];
+          let firstPage = Math.max(0, firstNeededPage);
+          let lastPage =
+            parentKey !== root ? lastNeededPage : Math.min(lastNeededPage, Math.floor(grid.size / grid.pageSize));
+          let lastRequestedRange = lastRequestedRanges[parentKey];
+          if (!lastRequestedRange) {
+            lastRequestedRange = [-1, -1];
           }
-
-          let lastRequestedRange = lastRequestedRanges[parentKey] || [-1, -1];
-          if (lastRequestedRange[0] != pageRange[0] || lastRequestedRange[1] != pageRange[1]) {
-            lastRequestedRanges[parentKey] = pageRange;
-            let pageCount = pageRange[1] - pageRange[0] + 1;
-            fetch(pageRange[0] * grid.pageSize, pageCount * grid.pageSize);
+          if (lastRequestedRange[0] != firstPage || lastRequestedRange[1] != lastPage) {
+            lastRequestedRange = [firstPage, lastPage];
+            lastRequestedRanges[parentKey] = lastRequestedRange;
+            let count = lastPage - firstPage + 1;
+            fetch(firstPage * grid.pageSize, count * grid.pageSize);
           }
         });
 
@@ -330,8 +329,8 @@ import { GridFlowSelectionColumn } from "./vaadin-grid-flow-selection-column.js"
               treePageCallbacks[parentUniqueKey] = {};
             }
 
-            const parentItemContext = dataProviderController.getItemContext(params.parentItem);
-            if (cache[parentUniqueKey]?.[page] && parentItemContext.subCache) {
+            let itemCache = grid._cache.getCacheByKey(parentUniqueKey);
+            if (cache[parentUniqueKey] && cache[parentUniqueKey][page] && itemCache) {
               // workaround: sometimes grid-element gives page index that overflows
               page = Math.min(page, Math.floor(cache[parentUniqueKey].size / grid.pageSize));
 
@@ -342,7 +341,11 @@ import { GridFlowSelectionColumn } from "./vaadin-grid-flow-selection-column.js"
             } else {
               treePageCallbacks[parentUniqueKey][page] = callback;
 
-              grid.$connector.debounceParentRequest(parentUniqueKey, page);
+              grid.$connector.fetchPage(
+                (firstIndex, size) => grid.$connector.beforeParentRequest(firstIndex, size, params.parentItem.key),
+                page,
+                parentUniqueKey
+              );
             }
           } else {
             // workaround: sometimes grid-element gives page index that overflows
@@ -360,13 +363,36 @@ import { GridFlowSelectionColumn } from "./vaadin-grid-flow-selection-column.js"
               return;
             }
 
-            if (cache[root]?.[page]) {
+            if (cache[root] && cache[root][page]) {
               callback(cache[root][page]);
             } else {
               rootPageCallbacks[page] = callback;
 
-              grid.$connector.debounceRootRequest(page);
+              rootRequestDebouncer = Debouncer.debounce(
+                rootRequestDebouncer,
+                timeOut.after(grid._hasData ? rootRequestDelay : 0),
+                () => {
+                  grid.$connector.fetchPage(
+                    (firstIndex, size) => grid.$server.setRequestedRange(firstIndex, size),
+                    page,
+                    root
+                  );
+                }
+              );
             }
+          }
+        });
+
+        const sorterChangeListener = tryCatchWrapper(function (_, oldValue) {
+          if (oldValue !== undefined && !sorterDirectionsSetFromServer) {
+            grid.$server.sortersChanged(
+              grid._sorters.map(function (sorter) {
+                return {
+                  path: sorter.path,
+                  direction: sorter.direction
+                };
+              })
+            );
           }
         });
 
@@ -386,7 +412,9 @@ import { GridFlowSelectionColumn } from "./vaadin-grid-flow-selection-column.js"
                 });
 
                 sorters.forEach((sorter) => {
-                  sorter.direction = null;
+                  if (!directions.filter((d) => d.column === sorter.getAttribute('path'))[0]) {
+                    sorter.direction = null;
+                  }
                 });
 
                 // Apply directions in correct order, depending on configured multi-sort priority.
@@ -398,7 +426,7 @@ import { GridFlowSelectionColumn } from "./vaadin-grid-flow-selection-column.js"
                 }
                 directions.forEach(({ column, direction }) => {
                   sorters.forEach((sorter) => {
-                    if (sorter.getAttribute('path') === column) {
+                    if (sorter.getAttribute('path') === column && sorter.direction !== direction) {
                       sorter.direction = direction;
                     }
                   });
@@ -409,6 +437,7 @@ import { GridFlowSelectionColumn } from "./vaadin-grid-flow-selection-column.js"
             })
           );
         });
+        grid._createPropertyObserver('_previousSorters', sorterChangeListener);
 
         grid._updateItem = tryCatchWrapper(function (row, item) {
           Grid.prototype._updateItem.call(grid, row, item);
@@ -419,18 +448,22 @@ import { GridFlowSelectionColumn } from "./vaadin-grid-flow-selection-column.js"
           if (!row.hidden) {
             // make sure that component renderers are updated
             Array.from(row.children).forEach((cell) => {
-              Array.from(cell?._content?.__templateInstance?.children || []).forEach((content) => {
-                if (content._attachRenderedComponentIfAble) {
-                  content._attachRenderedComponentIfAble();
-                }
-                // In hierarchy column of tree grid, the component renderer is inside its content,
-                // this updates it renderer from innerContent
-                Array.from(content?.children || []).forEach((innerContent) => {
-                  if (innerContent._attachRenderedComponentIfAble) {
-                    innerContent._attachRenderedComponentIfAble();
+              if (cell._content && cell._content.__templateInstance && cell._content.__templateInstance.children) {
+                Array.from(cell._content.__templateInstance.children).forEach((content) => {
+                  if (content._attachRenderedComponentIfAble) {
+                    content._attachRenderedComponentIfAble();
+                  }
+                  // In hierarchy column of tree grid, the component renderer is inside its content,
+                  // this updates it renderer from innerContent
+                  if (content.children) {
+                    Array.from(content.children).forEach((innerContent) => {
+                      if (innerContent._attachRenderedComponentIfAble) {
+                        innerContent._attachRenderedComponentIfAble();
+                      }
+                    });
                   }
                 });
-              });
+              }
             });
           }
           // since no row can be selected when selection mode is NONE
@@ -506,16 +539,15 @@ import { GridFlowSelectionColumn } from "./vaadin-grid-flow-selection-column.js"
           let items;
           if ((parentKey || root) !== root) {
             items = cache[parentKey][page];
-            const parentItem = createEmptyItemFromKey(parentKey);
-            const parentItemContext = dataProviderController.getItemContext(parentItem);
-            if (parentItemContext && parentItemContext.subCache) {
+            let itemCache = grid._cache.getCacheByKey(parentKey);
+            if (itemCache) {
               const callbacksForParentKey = treePageCallbacks[parentKey];
               const callback = callbacksForParentKey && callbacksForParentKey[page];
-              _updateGridCache(page, items, callback, parentItemContext.subCache);
+              _updateGridCache(page, items, callback, itemCache);
             }
           } else {
             items = cache[root][page];
-            _updateGridCache(page, items, rootPageCallbacks[page], dataProviderController.rootCache);
+            _updateGridCache(page, items, rootPageCallbacks[page], grid._cache);
           }
           return items;
         };
@@ -547,16 +579,16 @@ import { GridFlowSelectionColumn } from "./vaadin-grid-flow-selection-column.js"
          * Updates all visible grid rows in DOM.
          */
         const updateAllGridRowsInDomBasedOnCache = function () {
-          updateGridFlatSize();
+          updateGridEffectiveSize();
           grid.__updateVisibleRows();
         };
 
         /**
-         * Updates the <vaadin-grid>'s internal cache size and flat size.
+         * Updates the <vaadin-grid>'s internal cache size and effective size.
          */
-        const updateGridFlatSize = function () {
-          dataProviderController.recalculateFlatSize();
-          grid._flatSize = dataProviderController.flatSize;
+        const updateGridEffectiveSize = function () {
+          grid._cache.updateSize();
+          grid._effectiveSize = grid._cache.effectiveSize;
         };
 
         /**
@@ -587,11 +619,6 @@ import { GridFlowSelectionColumn } from "./vaadin-grid-flow-selection-column.js"
 
           const firstPage = index / grid.pageSize;
           const updatedPageCount = Math.ceil(items.length / grid.pageSize);
-
-          // For root cache, remember the range of pages that were set during an update
-          if (pkey === root) {
-            currentUpdateSetRange = [firstPage, firstPage + updatedPageCount - 1];
-          }
 
           for (let i = 0; i < updatedPageCount; i++) {
             let page = firstPage + i;
@@ -675,9 +702,8 @@ import { GridFlowSelectionColumn } from "./vaadin-grid-flow-selection-column.js"
 
               // update grid's cache
               const index = parseInt(cacheLocation.page) * grid.pageSize + parseInt(cacheLocation.index);
-              const { rootCache } = dataProviderController;
-              if (rootCache.items[index]) {
-                rootCache.items[index] = updatedItems[i];
+              if (grid._cache.items[index]) {
+                grid._cache.items[index] = updatedItems[i];
               }
             }
           }
@@ -691,44 +717,6 @@ import { GridFlowSelectionColumn } from "./vaadin-grid-flow-selection-column.js"
           ensureSubCacheQueue = [];
           parentRequestQueue = [];
         });
-
-        /**
-         * Ensures that the last requested page range does not include pages for data that has been cleared.
-         * The last requested range is used in `fetchPage` to skip requests to the server if the page range didn't
-         * change. However, if some pages of that range have been cleared by data communicator, we need to clear the
-         * range to ensure the pages get loaded again. This can happen for example when changing the requested range
-         * on the server (e.g. preload of items on scroll to index), which can cause data communicator to clear pages
-         * that the connector assumes are already loaded.
-         */
-        const sanitizeLastRequestedRange = function () {
-          // Only relevant for the root cache
-          const range = lastRequestedRanges[root];
-          // Range may not be set yet, or nothing was cleared
-          if (!range || !currentUpdateClearRange) {
-            return;
-          }
-
-          // Determine all pages that were cleared
-          const numClearedPages = currentUpdateClearRange[1] - currentUpdateClearRange[0] + 1;
-          const clearedPages = Array.from({ length: numClearedPages }, (_, i) => currentUpdateClearRange[0] + i);
-
-          // Remove pages that have been set in same update
-          if (currentUpdateSetRange) {
-            const [first, last] = currentUpdateSetRange;
-            for (let page = first; page <= last; page++) {
-              const index = clearedPages.indexOf(page);
-              if (index >= 0) {
-                clearedPages.splice(index, 1);
-              }
-            }
-          }
-
-          // Clear the last requested range if it includes any of the cleared pages
-          if (clearedPages.some((page) => page >= range[0] && page <= range[1])) {
-            range[0] = -1;
-            range[1] = -1;
-          }
-        };
 
         grid.$connector.clear = tryCatchWrapper(function (index, length, parentKey) {
           let pkey = parentKey || root;
@@ -744,11 +732,6 @@ import { GridFlowSelectionColumn } from "./vaadin-grid-flow-selection-column.js"
           let firstPage = Math.floor(index / grid.pageSize);
           let updatedPageCount = Math.ceil(length / grid.pageSize);
 
-          // For root cache, remember the range of pages that were cleared during an update
-          if (pkey === root) {
-            currentUpdateClearRange = [firstPage, firstPage + updatedPageCount - 1];
-          }
-
           for (let i = 0; i < updatedPageCount; i++) {
             let page = firstPage + i;
             let items = cache[pkey][page];
@@ -761,24 +744,22 @@ import { GridFlowSelectionColumn } from "./vaadin-grid-flow-selection-column.js"
             }
             updateGridItemsInDomBasedOnCache(items);
           }
-          let cacheToClear = dataProviderController.rootCache;
+          let cacheToClear = grid._cache;
           if (parentKey) {
-            const parentItem = createEmptyItemFromKey(pkey);
-            const parentItemContext = dataProviderController.getItemContext(parentItem);
-            cacheToClear = parentItemContext.subCache;
+            cacheToClear = grid._cache.getCacheByKey(pkey);
           }
           const endIndex = index + updatedPageCount * grid.pageSize;
           for (let itemIndex = index; itemIndex < endIndex; itemIndex++) {
             delete cacheToClear.items[itemIndex];
-            cacheToClear.removeSubCache(itemIndex);
+            delete cacheToClear.itemCaches[itemIndex];
           }
-          updateGridFlatSize();
+          updateGridEffectiveSize();
         });
 
         grid.$connector.reset = tryCatchWrapper(function () {
           grid.size = 0;
           deleteObjectContents(cache);
-          deleteObjectContents(dataProviderController.rootCache.items);
+          deleteObjectContents(grid._cache.items);
           deleteObjectContents(lastRequestedRanges);
           if (ensureSubCacheDebouncer) {
             ensureSubCacheDebouncer.cancel();
@@ -825,7 +806,7 @@ import { GridFlowSelectionColumn } from "./vaadin-grid-flow-selection-column.js"
           // The treePageCallbacks for the itemId are about to be discarded ->
           // Resolve the callbacks with an empty array to not leave grid in loading state
           Object.values(treePageCallbacks[itemId] || {}).forEach((callback) => callback([]));
-
+          
           delete treePageCallbacks[itemId];
           ensureSubCacheQueue = ensureSubCacheQueue.filter((item) => item.itemkey !== itemId);
           parentRequestQueue = parentRequestQueue.filter((item) => item.parentKey !== itemId);
@@ -844,7 +825,7 @@ import { GridFlowSelectionColumn } from "./vaadin-grid-flow-selection-column.js"
           }
 
           // If grid has outstanding requests for this parent, then resolve them
-          // and let grid update the flat size and re-render.
+          // and let grid update the effective size and re-render.
           let outstandingRequests = Object.getOwnPropertyNames(treePageCallbacks[parentKey] || {});
           for (let i = 0; i < outstandingRequests.length; i++) {
             let page = outstandingRequests[i];
@@ -875,12 +856,11 @@ import { GridFlowSelectionColumn } from "./vaadin-grid-flow-selection-column.js"
           // children were added or removed, the grid will not be aware of it
           // unless we manually update the size.
           if (hasSizeChanged && outstandingRequests.length === 0) {
-            const parentItem = createEmptyItemFromKey(parentKey);
-            const parentItemContext = dataProviderController.getItemContext(parentItem);
-            if (parentItemContext && parentItemContext.subCache) {
-              parentItemContext.subCache.size = levelSize;
+            const itemCache = grid._cache.getCacheByKey(parentKey);
+            if (itemCache) {
+              itemCache.size = levelSize;
             }
-            updateGridFlatSize();
+            updateGridEffectiveSize();
           }
 
           // Let server know we're done
@@ -908,7 +888,7 @@ import { GridFlowSelectionColumn } from "./vaadin-grid-flow-selection-column.js"
             const lastRequestedRangeEnd = Math.min(lastRequestedRange[1], lastAvailablePage);
             // Resolve if we have data or if we don't expect to get data
             const callback = rootPageCallbacks[page];
-            if (cache[root]?.[page] || page < lastRequestedRange[0] || +page > lastRequestedRangeEnd) {
+            if ((cache[root] && cache[root][page]) || page < lastRequestedRange[0] || +page > lastRequestedRangeEnd) {
               delete rootPageCallbacks[page];
 
               if (cache[root][page]) {
@@ -928,11 +908,17 @@ import { GridFlowSelectionColumn } from "./vaadin-grid-flow-selection-column.js"
             }
           }
 
-          // Sanitize last requested range for the root level
-          sanitizeLastRequestedRange();
-          // Clear current update state
-          currentUpdateSetRange = null;
-          currentUpdateClearRange = null;
+          if (Object.keys(rootPageCallbacks).length) {
+            // There are still unresolved callbacks waiting for data to the root level,
+            // which means that the range grid requested items for was only partially filled.
+            //
+            // This can happen for example if you preload some items without knowing exactly
+            // how many items the grid web component is going to request.
+            //
+            // Clear the last requested range for the root level to unblock
+            // any possible data requests for the same range in fetchPage.
+            delete lastRequestedRanges[root];
+          }
 
           // Let server know we're done
           grid.$server.confirmUpdate(id);
@@ -946,7 +932,7 @@ import { GridFlowSelectionColumn } from "./vaadin-grid-flow-selection-column.js"
           }
           deleteObjectContents(lastRequestedRanges);
 
-          dataProviderController.rootCache.removeSubCaches();
+          grid._cache.itemCaches = {};
 
           updateAllGridRowsInDomBasedOnCache();
         });
@@ -1030,9 +1016,6 @@ import { GridFlowSelectionColumn } from "./vaadin-grid-flow-selection-column.js"
         });
 
         grid.__applySorters = () => {
-          const sorters = grid._mapSorters();
-          const sortersChanged = JSON.stringify(grid._previousSorters) !== JSON.stringify(sorters);
-
           // Update the _previousSorters in vaadin-grid-sort-mixin so that the __applySorters
           // method in the mixin will skip calling clearCache().
           //
@@ -1045,14 +1028,10 @@ import { GridFlowSelectionColumn } from "./vaadin-grid-flow-selection-column.js"
           // 2. Sorted programmatically on the server: The items in the new sort order have already
           // been fetched and applied to the grid. The sorter element states are updated programmatically
           // to reflect the new sort order, but there's no need to re-render the grid rows.
-          grid._previousSorters = sorters;
+          grid._previousSorters = grid._mapSorters();
 
           // Call the original __applySorters method in vaadin-grid-sort-mixin
           Grid.prototype.__applySorters.call(grid);
-
-          if (sortersChanged && !sorterDirectionsSetFromServer) {
-            grid.$server.sortersChanged(sorters);
-          }
         };
 
         grid.$connector.setFooterRenderer = tryCatchWrapper(function (column, options) {
@@ -1088,16 +1067,9 @@ import { GridFlowSelectionColumn } from "./vaadin-grid-flow-selection-column.js"
           // when using open on click we just use the click event itself
           const sourceEvent = event.detail.sourceEvent || event;
           const eventContext = grid.getEventContext(sourceEvent);
-          const key = eventContext.item?.key || '';
-          const columnId = eventContext.column?.id || '';
+          const key = (eventContext.item && eventContext.item.key) || '';
+          const columnId = (eventContext.column && eventContext.column.id) || '';
           return { key, columnId };
-        });
-
-        grid.preventContextMenu = tryCatchWrapper(function (event) {
-            const isLeftClick = event.type === 'click';
-            const { column } = grid.getEventContext(event);
-
-            return isLeftClick && column instanceof GridFlowSelectionColumn;
         });
 
         grid.addEventListener(

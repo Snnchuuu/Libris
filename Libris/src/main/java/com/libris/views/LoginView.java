@@ -1,22 +1,33 @@
 package com.libris.views;
 
+import com.libris.UserDAO;
+import com.libris.Member;
+import com.libris.LibraryManager;
+import com.libris.User;
 import com.vaadin.flow.component.button.Button;
-import com.vaadin.flow.component.dependency.CssImport;
 import com.vaadin.flow.component.html.H1;
+import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.PasswordField;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.router.Route;
+import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.server.VaadinSession;
 
 // login sayfası
 
-@Route("login") // Tarayıcıda localhost:8080/login yazınca bu ekran açılır
+@Route("login")
+@PageTitle("Libris - Login")
 public class LoginView extends VerticalLayout {
 
+    private LibraryManager manager = new LibraryManager();
+
+    // 🔥 forgot link artık class level
+    private Anchor forgotLink = new Anchor("forgot-password", "Hesabımı Unuttum?");
+
     public LoginView() {
-        // Ekranın ortalanması için ayarlar
+
         setAlignItems(Alignment.CENTER);
         setJustifyContentMode(JustifyContentMode.CENTER);
         setHeightFull();
@@ -27,26 +38,48 @@ public class LoginView extends VerticalLayout {
         PasswordField password = new PasswordField("Şifre");
         Button loginButton = new Button("Giriş Yap");
 
+        // başlangıçta gizli
+        forgotLink.setVisible(false);
+
         loginButton.addClickListener(click -> {
+
             String user = username.getValue();
             String pass = password.getValue();
 
-            // giriş bilgileri burda, database eklendiğinden oradan kontrol edilecek
-            if ("admin".equals(user) && "123".equals(pass)) {
-                // Session'a ADMIN rolünü kaydet
-                VaadinSession.getCurrent().setAttribute("role", "ADMIN");
-                VaadinSession.getCurrent().setAttribute("username", "Yönetici");
-                getUI().ifPresent(ui -> ui.navigate("katalog"));
-            } else if ("user".equals(user) && "123".equals(pass)) {
-                // Session'a USER rolünü kaydet
-                VaadinSession.getCurrent().setAttribute("role", "USER");
-                VaadinSession.getCurrent().setAttribute("username", "Abdulkadir Ustaoğlu");
-                getUI().ifPresent(ui -> ui.navigate("katalog"));
+            UserDAO dao = new UserDAO();
+
+            boolean ok = dao.loginUser(user, pass);
+
+            if (ok) {
+
+                Member member = dao.getMemberByUsername(user);
+
+                if (member != null) {
+
+                    VaadinSession.getCurrent().setAttribute("username", member.getUsername());
+                    VaadinSession.getCurrent().setAttribute("role", member.getRole());
+
+                    if ("ADMIN".equals(member.getRole())) {
+                        getUI().ifPresent(ui -> ui.navigate("admin"));
+                    } else {
+                        getUI().ifPresent(ui -> ui.navigate("katalog"));
+                    }
+
+                } else {
+                    Notification.show("User found but cannot load data!");
+                }
+
             } else {
                 Notification.show("Hatalı kullanıcı adı veya şifre!");
+                forgotLink.setVisible(true); // 🔥 burada göster
             }
         });
 
-        add(username, password, loginButton);
+        // UI
+        add(username, password, loginButton, forgotLink);
     }
+
+    // ----------------------------------------------------
+    // KAYDOL + FORGOT PASSWORD LINKLERİ (istersen sonra ekleriz)
+    // ----------------------------------------------------
 }

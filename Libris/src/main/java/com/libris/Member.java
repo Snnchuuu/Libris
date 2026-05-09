@@ -11,8 +11,8 @@ public class Member extends User{	//Concrede class Member extended from supercla
 	private int totalDelays;//Needed for the penalty calculation
 
 	//Constructor for payment
-	public Member(int id, String name, String email, String password) {
-		super(id, name, email, password, "MEMBER");
+	public Member(int id, String username, String name, String email, String password) {
+		super(id, username, name, email, password, "MEMBER");
 		setBalance(0.0);	
 		setTotalDelays(0);	//When a new member is created their penalties and delays have to be 0 because of this we are making them 0 in the constructor
 		
@@ -44,8 +44,8 @@ public class Member extends User{	//Concrede class Member extended from supercla
 	}
 
 	@Override
-	public boolean login(String email, String password) {	//Login function for members
-		if(this.getEmail().equals(email) && this.getPassword().equals(password)) {
+	public boolean login(String username, String password) {	//Login function for members
+		if(this.getUsername().equals(username) && this.getPassword().equals(password)) {
 			System.out.println("Login Successful: Welcome to Libris, " + getName());
 			return true;
 		}

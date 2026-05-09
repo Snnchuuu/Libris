@@ -8,9 +8,9 @@ public class Main {
         LibraryManager manager = new LibraryManager();
 
         // Declaring the users
-        Admin admin = new Admin(1, "Ahmet Yılmaz", "ahmet@libris.com", "admin123");
-        Member member1 = new Member(101, "Can Tekin", "can@mail.com", "pass123");
-        Member member2 = new Member(102, "Elif Demir", "elif@mail.com", "pass456");
+        Admin admin = new Admin(1, "ahmetadmin", "Ahmet Yılmaz", "ahmet@libris.com", "admin123");
+        Member member1 = new Member(101, "cantek" ,"Can Tekin", "can@mail.com", "pass123");
+        Member member2 = new Member(102, "elifdemir" , "Elif Demir", "elif@mail.com", "pass456");
         
         manager.addUser(admin);
         manager.addUser(member1);
@@ -66,7 +66,7 @@ public class Main {
 
         // Testing the penalty methods
         System.out.println("\n----penalty test----");
-        BorrowRecord record1 = new BorrowRecord(member1, 1, book1, null, 14);
+        BorrowRecord record1 = new BorrowRecord(member1, 1, book1, 14);
         record1.setBorrowDate(LocalDate.now().minusDays(20)); // borrowed 20 days ago
         manager.returnMaterial(record1);
         System.out.println(member1); //shows penalty
@@ -74,7 +74,7 @@ public class Main {
         
         //Testing the normal return
         System.out.println("\n----returning test----");
-        BorrowRecord record2 = new BorrowRecord(member2, 2, mag1, null, 14);
+        BorrowRecord record2 = new BorrowRecord(member2, 2, mag1, 14);
         record2.setBorrowDate(LocalDate.now().minusDays(5)); //borrowed 5 days ago, has 14 days
         manager.returnMaterial(record2);
         System.out.println(member2);

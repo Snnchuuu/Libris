@@ -8,8 +8,8 @@ package com.libris;
 public class Admin extends User{	//Concrede class Admin extended from superclass User
 	
 	//Constructor for Admin
-	public Admin(int id, String name, String email, String password) {
-		super(id, name, email, password, "ADMIN");
+	public Admin(int id, String username, String name, String email, String password) {
+		super(id, username,  name, email, password, "ADMIN");
 		
 	}
 
@@ -22,12 +22,12 @@ public class Admin extends User{	//Concrede class Admin extended from superclass
 	}
 
 	@Override
-	public boolean login(String email, String password) {	//login function for admins
-		if (this.getEmail().equals(email) && this.getPassword().equals(password)) {
-            System.out.println("Admin Access Granted: System online.");
-            return true;
-        }
-        return false;
+	public boolean login(String username, String password) {
+		if (this.getUsername().equals(username) && this.getPassword().equals(password)) {
+			System.out.println("Admin Access Granted");
+			return true;
+		}
+		return false;
 	}
 	
 	@Override

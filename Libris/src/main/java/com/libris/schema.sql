@@ -12,6 +12,7 @@
 CREATE TABLE IF NOT EXISTS users (
     user_id        INT AUTO_INCREMENT PRIMARY KEY,
     username       VARCHAR(100)   NOT NULL,
+    name 		   VARCHAR(150)   NOT NULL,
     email          VARCHAR(150)   NOT NULL UNIQUE,
     password       VARCHAR(255)   NOT NULL,          -- Store hashed passwords in production!
     role           ENUM('ADMIN', 'MEMBER') NOT NULL,
@@ -112,13 +113,13 @@ CREATE TABLE IF NOT EXISTS reviews (
 -- -------------------------------------------------------
 
 -- Admin user
-INSERT INTO users (username, email, password, role) VALUES
-('Ahmet Yılmaz', 'ahmet@libris.com', 'admin123', 'ADMIN');
+INSERT INTO users (username, name, email, password, role) VALUES
+('ahmetadmin', 'Ahmet Yılmaz', 'ahmet@libris.com', 'admin123', 'ADMIN');
 
 -- Member users
-INSERT INTO users (username, email, password, role, balance, total_delays) VALUES
-('Can Tekin',  'can@mail.com',  'pass123', 'MEMBER', 0.0, 0),
-('Elif Demir', 'elif@mail.com', 'pass456', 'MEMBER', 0.0, 0);
+INSERT INTO users (username, name, email, password, role, balance, total_delays) VALUES
+('cantek', 'Can Tekin',  'can@mail.com',  'pass123', 'MEMBER', 0.0, 0),
+('elifdemir', 'Elif Demir', 'elif@mail.com', 'pass456', 'MEMBER', 0.0, 0);
 
 -- Sample books
 INSERT INTO library_items (title, author, publication_year, copy_count, available_copies, status, item_type, isbn, page_count, genre) VALUES

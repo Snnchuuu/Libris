@@ -1,11 +1,11 @@
 import 'construct-style-sheets-polyfill';
 import { LitElement, PropertyValueMap, TemplateResult } from 'lit';
-import { Product } from './License';
-import { ConnectionStatus } from './connection';
 import './theme-editor/editor';
 import { ThemeEditorState } from './theme-editor/model';
-import './vaadin-dev-tools-info';
+import { Product } from './License';
+import { ConnectionStatus } from './connection';
 import './vaadin-dev-tools-log';
+import './vaadin-dev-tools-info';
 /**
  * Plugin API for the dev tools window.
  */
@@ -73,20 +73,11 @@ interface Message {
     link?: string;
     persistentId?: string;
     dontShowAgain: boolean;
-    dontShowAgainMessage?: string;
     deleted: boolean;
 }
-type DevToolsConf = {
-    enable: boolean;
-    url: string;
-    backend?: string;
-    liveReloadPort: number;
-    token?: string;
-};
 export declare class VaadinDevTools extends LitElement {
     static MAX_LOG_ROWS: number;
     unhandledMessages: ServerMessage[];
-    conf: DevToolsConf;
     static get styles(): import("lit").CSSResult[];
     static DISMISSED_NOTIFICATIONS_IN_LOCAL_STORAGE: string;
     static ACTIVE_KEY_IN_SESSION_STORAGE: string;
@@ -99,6 +90,10 @@ export declare class VaadinDevTools extends LitElement {
     static BACKEND_DISPLAY_NAME: Record<string, string>;
     static get isActive(): boolean;
     static notificationDismissed(persistentId: string): boolean;
+    url?: string;
+    liveReloadDisabled?: boolean;
+    backend?: string;
+    springBootLiveReloadPort?: number;
     expanded: boolean;
     messages: Message[];
     splashMessage?: string;
@@ -134,19 +129,20 @@ export declare class VaadinDevTools extends LitElement {
     showSplashMessage(msg: string | undefined): void;
     demoteSplashMessage(): void;
     checkLicense(productInfo: Product): void;
-    log(type: MessageType, message: string, details?: string, link?: string, dontShowAgainMessage?: string): void;
-    showNotification(type: MessageType, message: string, details?: string, link?: string, persistentId?: string, dontShowAgainMessage?: string): void;
+    log(type: MessageType, message: string, details?: string, link?: string): void;
+    showNotification(type: MessageType, message: string, details?: string, link?: string, persistentId?: string): void;
     dismissNotification(id: number): void;
     findNotificationIndex(id: number): number;
     toggleDontShowAgain(id: number): void;
     setActive(yes: boolean): void;
-    getStatusColor(status: ConnectionStatus | undefined): "none" | "var(--dev-tools-green-color)" | "var(--dev-tools-grey-color)" | "var(--dev-tools-yellow-color)" | "var(--dev-tools-red-color)";
+    getStatusColor(status: ConnectionStatus | undefined): "none" | "var(--dev-tools-green-color)" | "var(--dev-tools-grey-color)" | "var(--dev-tools-yellow-hsl)" | "var(--dev-tools-red-color)";
     renderMessage(messageObject: Message): TemplateResult<1>;
     render(): TemplateResult<1>;
     protected updated(_changedProperties: PropertyValueMap<any> | Map<PropertyKey, unknown>): void;
     renderCode(): TemplateResult<1>;
     private renderFeatures;
-    setJavaLiveReloadActive(active: boolean): void;
+    disableJavaLiveReload(): void;
+    enableJavaLiveReload(): void;
     renderThemeEditor(): TemplateResult<1>;
     toggleFeatureFlag(e: Event, feature: Feature): void;
 }

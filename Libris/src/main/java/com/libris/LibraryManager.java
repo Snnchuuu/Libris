@@ -1,140 +1,192 @@
 package com.libris;
 
-import java.util.ArrayList;	//Importing ArrayList
-import java.util.List;	//Importing list
-import java.time.LocalDate;	//Importing LocalDate for date calculations
-import java.time.temporal.ChronoUnit; //Used to represent standard units of time such as days, hours, minutes, seconds
+import java.util.ArrayList;   //Importing ArrayList
+import java.util.List;        //Importing list
+import java.time.LocalDate;   //Importing LocalDate for date calculations
 
-/*Info: 
- * List is an interface and it contains some methods for us to use but if we want to iplement the methods of list
- * we have to use ArrayList to do so.*/
+/*
+ * Info:
+ * This class is responsible for managing users, authentication and registration.
+ * It acts as a central service layer for the library system.
+ * It handles user creation, login and username recovery operations.
+ */
 
-public class LibraryManager {	//Start of class LibraryManager
+public class LibraryManager {   //Start of class LibraryManager
 
-	private List<LibraryItem> items;	//items is a List interface with given generic LibraryItem.
-	private List<User> users;	//users is a List interface with given generic User.
-	private List<BorrowRecord> borrowRecords;	//borrowRecords is a List interface with given generic BorrowRecord.
-	private List<Notification> notifications;   //notifications is a List interface with given generic Notification.
-	private int nextNotificationId;   //Counter for generating notification IDs
-	
-	public LibraryManager() {	//Constructor of our class
-		this.items = new ArrayList<>();	//Creating an implementation of the interface
-		this.users = new ArrayList<>();	//Creating an implementation of the interface
-		this.borrowRecords = new ArrayList<>();	//Creating an implementation of the interface
-		this.notifications = new ArrayList<>(); //Initialize notifications list
-		this.nextNotificationId = 1;  //Start IDs from 1
-		
-	}
-	
-	public void addItems(LibraryItem item) {	//Method for adding the LibraryItem objects to our set
-		items.add(item);
-		System.out.println("Item added: "+ item.getTitle());
-	}
-	
-	public void addUser(User user) {	//Method for adding the User objects to our set
-		users.add(user);
-		System.out.println("User added: " + user.getName());
-	}
-	
-	public void borrowMaterial(Member member, LibraryItem item) {	//Method for borrowing operations
-		if(!(item instanceof Borrowable)) {	//Checking if the given item is an example of the interface Borrowable
-			System.err.println("Error! This item (" + item.getTitle() + ") is digital and cannot be borrowed physically!");
-			//When the object is a digital object and cannot be borrowed physically
-			return;
-		}
-		//If the item item is free to be borrowed:
-		System.out.println("Processing borrow for: " + item.getTitle());
-		
-		BorrowRecord record = new BorrowRecord(member, borrowRecords.size() + 1, item, 14);
+    private List<User> users;   //users list stores all registered users
+    private List<LibraryItem> items;  //items in system
+    private List<BorrowRecord> borrowRecords;
+
+    private UserDAO userDAO; //DATABASE ACCESS OBJECT
+
+    public LibraryManager() {   //Constructor of our class
+        this.users = new ArrayList<>();
+        this.items = new ArrayList<>();
+        this.borrowRecords = new ArrayList<>();
+        this.userDAO = new UserDAO(); //init DAO
+    }
+
+    // ----------------------------------------------------
+    // USER MANAGEMENT SYSTEM
+    // ----------------------------------------------------
+
+    public void addUser(User user) {  
+        //Method for adding existing user objects (Admin, Member etc.)
+
+        users.add(user);
+
+        //SYNC TO DATABASE
+        if (user instanceof Admin) {
+            userDAO.registerUser(user.getUsername(), user.getName(), user.getEmail(), user.getPassword(), "ADMIN");
+        } else {
+            userDAO.registerUser(user.getUsername(), user.getName(), user.getEmail(), user.getPassword(), "MEMBER");
+        }
+
+        System.out.println("User added: " + user.getUsername());
+    }
+
+    public void addItems(LibraryItem item) {  
+        //Method for adding library items into system
+
+        items.add(item);
+        System.out.println("Item added: " + item.getTitle());
+    }
+
+    // ----------------------------------------------------
+    // REGISTRATION SYSTEM
+    // ----------------------------------------------------
+
+    public boolean registerUser(String username, String name, String email, String password) {  
+
+        boolean success = userDAO.registerUser(username, name, email, password, "MEMBER");
+
+        if (!success) {
+            System.out.println("Error! Registration failed in database.");
+            return false;
+        }
+
+        // FIX: DB’den çekmek yerine direkt RAM cache oluşturuyoruz
+        Member newUser = new Member(
+                users.size() + 1,
+                username,
+                name,
+                email,
+                password
+        );
+
+        users.add(newUser); // RAM CACHE
+
+        System.out.println("User registered successfully: " + username);
+        return true;
+    }
+
+    // ----------------------------------------------------
+    // LOGIN SYSTEM
+    // ----------------------------------------------------
+
+    public User login(String username, String password) {  
+
+        // 1. RAM CHECK (cache-first)
+        for (User u : users) {
+            if (u.getUsername().equals(username) &&
+                u.getPassword().equals(password)) {
+
+                System.out.println("Login from RAM: " + username);
+                return u;
+            }
+        }
+
+        // 2. DB CHECK (fallback)
+        boolean ok = userDAO.loginUser(username, password);
+
+        if (!ok) {
+            System.out.println("Login failed!");
+            return null;
+        }
+
+        // FIX: username yerine email kullanman gerekiyorsa burada netleşmeli
+        Member member = userDAO.getMemberByUsername(username);
+
+        if (member != null) {
+            users.add(member); // cache update
+            System.out.println("Login from DB: " + username);
+            return member;
+        }
+
+        return null;
+    }
+
+    // ----------------------------------------------------
+    // BORROW SYSTEM
+    // ----------------------------------------------------
+
+    public void borrowMaterial(Member member, LibraryItem item) {  
+
+        if (!(item instanceof Borrowable)) {
+            System.err.println("Error! This item cannot be borrowed physically!");
+            return;
+        }
+
+        BorrowRecord record = new BorrowRecord(
+                member,
+                borrowRecords.size() + 1,
+                item,
+                14
+        );
+
         borrowRecords.add(record);
-        
+
         ((Borrowable) item).borrowItem();
-	}
 
-	//Overloaded borrowMaterial: enables to specify a specific loan period
-	public void borrowMaterial(Member member, LibraryItem item, int loanPeriodDays) {
-		if(!(item instanceof Borrowable)) {
-			System.err.println("Error! This item (" +item.getTitle()+ ") is digital and cannot be borrowed physically!");
-			return;
-		}
-		if(loanPeriodDays<=0) {
-			throw new IllegalArgumentException("Loan period must be positive.");
-		}
-		System.out.println("Processing borrow for: " +item.getTitle()+ " (custom period: " +loanPeriodDays+ " days)");
-		
-		BorrowRecord record = new BorrowRecord(member, borrowRecords.size() + 1, item, loanPeriodDays);
-		borrowRecords.add(record);
-		
-		((Borrowable) item).borrowItem();
-	}
-	
-	public void returnMaterial(BorrowRecord record) {	//Method for returning the borrowed materials
-	    record.setReturnDate(java.time.LocalDate.now());
-	    
-	    // Use the logic we wrote in BorrowRecord to find delay
-	    int daysDelayed = record.calculateDaysDelayed();
-	    
-	    if (daysDelayed > 0) {
-	    	
-	        Member member = record.getMember();
-	        LibraryItem item = record.getItem();
-	        
-	        //Calculating Penalty: item type + member's total delay history
-	        double penaltyAmount = item.calculatePenalty(daysDelayed, member.getTotalDelays());
-	        
-	        // Apply the penalty to member's account
-	        member.setBalance(member.getBalance() + penaltyAmount);
-	        member.setTotalDelays(member.getTotalDelays() + 1);
-	        
-	        System.out.println("LATE RETURN: " + daysDelayed + " days late. Fine: " + penaltyAmount + " TL.");
-	    } else {
-	    	//If the material that is borrowed is back on time:
-	        System.out.println("RETURNED ON TIME: No penalty.");
-	    }
-	    
-	    if(record.getItem() instanceof Borrowable) {
-	    	((Borrowable)record.getItem()).returnItem();
-	    }
-	}
+        System.out.println("Borrow successful: " + item.getTitle());
+    }
 
-	public void checkAndCreateNotifications() {
-		LocalDate today = LocalDate.now();
-		
-		for (BorrowRecord record : borrowRecords) {
-			if (record.getIsReturned()) {
-				continue; //Skip returned items, no notification needed
-			}
-			Member member = record.getMember();
-			LibraryItem item = record.getItem();
-			long daysUntilDue = ChronoUnit.DAYS.between(today, record.getDueDate());
-			
-			Notification n = null;
-			
-			if (daysUntilDue > 1) {
-				n = new Notification(nextNotificationId++, member, daysUntilDue+ " day(s) left to return: " +item.getTitle());
-			} else if (daysUntilDue == 1) {
-				n = new Notification(nextNotificationId++, member, "need to return until tomorrow "+item.getTitle());
-			} else if (daysUntilDue == 0) {
-				n = new Notification(nextNotificationId++, member, "Last day to return: "+item.getTitle());
-			} else if (daysUntilDue < 0) {
-				n = new Notification(nextNotificationId++, member, "You are " +Math.abs(daysUntilDue)+ " day(s) overdue: " +item.getTitle());
-			}
-			
-			if (n != null) { //Only add if a notification was created
-				notifications.add(n);
-				System.out.println("Notification created: " +n.getMessage());
-			}
-		}
-	}
+    public void returnMaterial(BorrowRecord record) {
 
-	//Returns all notifications for a specific member
-	public List<Notification> getNotificationsForMember(Member member) {
-	    List<Notification> result = new ArrayList<>();
-	    for (Notification n : notifications) {
-	        if (n.getMember().equals(member)) {
-	            result.add(n);
-	        }
-	    }
-	    return result;
-	}
-}
+        record.setReturnDate(LocalDate.now());
+
+        int delay = record.calculateDaysDelayed();
+
+        if (delay > 0) {
+            System.out.println("Late return: " + delay + " days");
+        } else {
+            System.out.println("Returned on time");
+        }
+
+        if (record.getItem() instanceof Borrowable) {
+            ((Borrowable) record.getItem()).returnItem();
+        }
+
+        //SYNC PENALTY UPDATE TO DB
+        Member m = record.getMember();
+        userDAO.updateMemberPenalty(
+            m.getId(),
+            m.getBalance(),
+            m.getTotalDelays()
+        );
+    }
+
+    // ----------------------------------------------------
+    // USER SEARCH (RECOVERY PURPOSE)
+    // ----------------------------------------------------
+
+    public User findByUsername(String username) {  
+
+        for (User u : users) {
+            if (u.getUsername().equals(username)) {
+                return u;
+            }
+        }
+
+        return null;
+    }
+
+    // ----------------------------------------------------
+    // DEBUG
+    // ----------------------------------------------------
+
+    public List<User> getAllUsers() {
+        return users;
+    }
+
+}   //End of class LibraryManager

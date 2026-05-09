@@ -6,14 +6,16 @@ public abstract class User {	//Abstract Class User
 	private String email;	//User email address
 	private String password;	//password of the use
 	private String role;	//role of the user. Ex: Admin, Member
+	private String username;
 	
 	//constructor for User
-	public User(int id, String name, String email, String password, String role) {
+	public User(int id, String username, String name, String email, String password, String role) {
 		setId(id);
 		this.name = name;
 		this.email = email;
 		this.password = password;
 		this.role = role;
+		this.username = username;
 	}
 	
 	public int getId() {	//getter for id
@@ -25,6 +27,10 @@ public abstract class User {	//Abstract Class User
 			throw new IllegalArgumentException("User ID cannot be negative.");
 		}
 		this.id = id;
+	}
+	
+	public String getUsername() {
+	    return username;
 	}
 
 	public String getName() {	//getter for name
@@ -61,7 +67,7 @@ public abstract class User {	//Abstract Class User
 	
 	public abstract void showDashBoard();	//Abstract method showDashBoard. Will be overriden in concrede classes
 	
-	public abstract boolean login(String email, String password);	//For login system
+	public abstract boolean login(String username, String password);	//For login system
 	
 	@Override
 	public String toString() {
