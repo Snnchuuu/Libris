@@ -24,7 +24,7 @@ public class Notification {
 	
 	public void setNotificationId(int notificationId) {
 		if(notificationId<=0) {
-			throw new IllegalArgumentException("Notification ID must be positie.");
+			throw new IllegalArgumentException("Notification ID must be positive.");
 		}
 		this.notificationId = notificationId;
 	}
