@@ -108,6 +108,25 @@ CREATE TABLE IF NOT EXISTS reviews (
 );
 
 -- -------------------------------------------------------
+-- TABLE: wish_list
+-- Stores each member's personal wish list of library items.
+-- A member can only add the same item once (UNIQUE constraint).
+-- -------------------------------------------------------
+CREATE TABLE IF NOT EXISTS wish_list (
+    wish_id     INT AUTO_INCREMENT PRIMARY KEY,
+    user_id     INT  NOT NULL,
+    item_id     INT  NOT NULL,
+    added_date  DATE NOT NULL,
+
+    FOREIGN KEY (user_id) REFERENCES users(user_id),
+    FOREIGN KEY (item_id) REFERENCES library_items(item_id),
+
+    -- Prevent the same item from being added twice by the same member
+    UNIQUE KEY unique_wish (user_id, item_id)
+);
+
+
+-- -------------------------------------------------------
 -- Sample Data (optional - for testing)
 -- -------------------------------------------------------
 
