@@ -15,6 +15,7 @@ public class LibraryManager {
     private final UserDAO userDAO;
     private final ReservationDAO reservationDAO;
     private final ReviewDAO reviewDAO;
+    private final WishListDAO wishListDAO;
 
     public LibraryManager() {
         this.bookDAO        = new BookDAO();
@@ -22,6 +23,7 @@ public class LibraryManager {
         this.userDAO        = new UserDAO();
         this.reservationDAO = new ReservationDAO();
         this.reviewDAO      = new ReviewDAO();
+        this.wishListDAO    = new WishListDAO();
     }
 
     // ITEM OPERATIONS
@@ -215,5 +217,22 @@ public class LibraryManager {
     
     public double getAverageRating(int itemId) {
         return reviewDAO.getAverageRating(itemId);
+    }
+
+    //WISHLIST OPERATIONS
+
+    //Adds an item to a member's wish list in the database.
+    public void addToWishList(Member member, LibraryItem item) {
+        wishListDAO.addItem(member.getId(), item.getId());
+    }
+
+    //Removes an item from a member's wish list.
+    public void removeFromWishList(Member member, LibraryItem item) {
+        wishListDAO.removeItem(member.getId(), item.getId());
+    }
+
+    //Returns all items in a member's wish list.
+    public List<String> getWishList(int userId) {
+        return wishListDAO.getWishList(userId);
     }
 }
