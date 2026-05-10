@@ -4,15 +4,16 @@ import java.time.LocalDate;
  
 public class Main {
     public static void main(String[] args) {
-        // Starting the manager
+ 
+        // Starting the manager — all operations go through the database
         LibraryManager manager = new LibraryManager();
  
-        // Declaring the users — IDs match database (1=admin, 2=cantek, 3=elifdemir)
+        // Local objects for testing — IDs match database
         Admin admin = new Admin(1, "ahmetadmin", "Ahmet Yılmaz", "ahmet@libris.com", "admin123");
         Member member1 = new Member(2, "cantek", "Can Tekin", "can@mail.com", "pass123");
         Member member2 = new Member(3, "elifdemir", "Elif Demir", "elif@mail.com", "pass456");
  
-        // Creating the materials — IDs match database
+        // Materials — IDs match database
         Book book1 = new Book(1, "Java Programming", "Deitel", 2024, 5, "Available", "123-456", 800, "Education");
         Book book2 = new Book(2, "Araba Sevdası", "Recaizade Mahmut Ekrem", 1875, 3, "Available", "456-789", 276, "Novel");
         EBook ebook1 = new EBook(3, "Digital Trends", "AI Expert", 2025, 1, "Available", "PDF", 15.5);
@@ -32,7 +33,7 @@ public class Main {
         System.out.println(abook1);
         System.out.println(mag1);
  
-        // Testing login — uses username
+        // Testing login (polymorphism)
         System.out.println("\n--- login test ---");
         admin.login("ahmetadmin", "admin123");   // success
         member1.login("cantek", "wrongpass");    // fail
@@ -46,9 +47,9 @@ public class Main {
         System.out.println();
         member2.showDashBoard();
  
-        // Testing borrow
+        // Testing borrow — saved to database
         System.out.println("\n--- borrow test ---");
-        manager.borrowMaterial(member1, book1);  // success — saved to DB
+        manager.borrowMaterial(member1, book1);  // success
         manager.borrowMaterial(member1, ebook1); // fail — digital item
  
         // Testing penalty — in-memory calculation
@@ -83,7 +84,7 @@ public class Main {
         ebook1.search("Digital");
         abook1.search("Sapiens");
  
-        // Testing WishList
+        // Testing WishList (in-memory)
         System.out.println("\n--- wishlist test ---");
         WishList wishList = new WishList(1, member1);
         wishList.addItem(book1);
