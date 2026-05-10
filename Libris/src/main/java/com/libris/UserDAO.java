@@ -103,6 +103,8 @@ public class UserDAO {
                     rs.getString("email"),
                     rs.getString("password")
                 );
+                
+                member.setRole(rs.getString("role"));
 
                 member.setBalance(rs.getDouble("balance"));
                 member.setTotalDelays(rs.getInt("total_delays"));

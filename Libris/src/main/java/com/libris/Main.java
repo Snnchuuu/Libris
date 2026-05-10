@@ -5,6 +5,7 @@ import java.time.LocalDate;
 public class Main {
     public static void main(String[] args) {
         // Starting the manager
+    	BorrowScheduler.start();
         LibraryManager manager = new LibraryManager();
 
         // Declaring the users

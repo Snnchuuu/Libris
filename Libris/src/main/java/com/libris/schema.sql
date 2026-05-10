@@ -61,9 +61,9 @@ CREATE TABLE IF NOT EXISTS borrow_records (
     record_id     INT AUTO_INCREMENT PRIMARY KEY,
     user_id       INT            NOT NULL,
     item_id       INT            NOT NULL,
-    borrow_date   DATE           NOT NULL,
-    due_date      DATE           NOT NULL,            -- Expected return date (borrow + 15 days)
-    return_date   DATE,                               -- Actual return date (NULL if not returned yet)
+    borrow_date   DATETIME          NOT NULL,
+    due_date      DATETIME          NOT NULL,            -- Expected return date (borrow + 15 days)
+    return_date   DATETIME,                               -- Actual return date (NULL if not returned yet)
     status        ENUM('BORROWED', 'RETURNED') NOT NULL DEFAULT 'BORROWED',
     fine_amount   DOUBLE         NOT NULL DEFAULT 0.0, -- Penalty calculated on return
 

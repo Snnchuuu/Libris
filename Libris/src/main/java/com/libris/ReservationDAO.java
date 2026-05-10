@@ -104,6 +104,80 @@ public class ReservationDAO {
     }
 
     /**
+     * Bir kitap için bekleyen tüm rezervasyon sahiplerinin temel bilgileri.
+     * E-posta gönderirken kullanılır.
+     */
+    public static class PendingReserver {
+        public final int reservationId;
+        public final int userId;
+        public final String email;
+        public final String name;
+
+        public PendingReserver(int reservationId, int userId, String email, String name) {
+            this.reservationId = reservationId;
+            this.userId = userId;
+            this.email = email;
+            this.name = name;
+        }
+    }
+
+    /**
+     * Belirli bir kitap için PENDING rezervasyonu olan tüm kullanıcıları döndürür.
+     * Kitap stokta tekrar mevcut olduğunda hepsine bilgilendirme maili göndermek için kullanılır.
+     * Sıralama: en uzun bekleyen ilk sırada (request_date ASC).
+     */
+    public List<PendingReserver> getPendingReservers(int itemId) {
+        List<PendingReserver> result = new ArrayList<>();
+        String sql =
+            "SELECT r.reservation_id, u.user_id, u.email, u.name " +
+            "FROM reservations r " +
+            "JOIN users u ON r.user_id = u.user_id " +
+            "WHERE r.item_id = ? AND r.status = 'PENDING' " +
+            "ORDER BY r.request_date ASC";
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, itemId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    result.add(new PendingReserver(
+                        rs.getInt("reservation_id"),
+                        rs.getInt("user_id"),
+                        rs.getString("email"),
+                        rs.getString("name")
+                    ));
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error fetching pending reservers: " + e.getMessage());
+        }
+        return result;
+    }
+
+    /**
+     * Bu kullanıcı + kitap için PENDING rezervasyonu varsa FULFILLED yapar.
+     * Kullanıcı kendi rezerve ettiği kitabı ödünç aldığında çağrılır.
+     */
+    public boolean fulfillByUserAndItem(int userId, int itemId) {
+        String sql =
+            "UPDATE reservations SET status = 'FULFILLED' " +
+            "WHERE user_id = ? AND item_id = ? AND status = 'PENDING'";
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+            ps.setInt(2, itemId);
+            int rows = ps.executeUpdate();
+            if (rows > 0) {
+                System.out.println("[ReservationDAO] Auto-fulfilled " + rows
+                    + " reservation(s) for user=" + userId + ", item=" + itemId);
+            }
+            return rows > 0;
+        } catch (SQLException e) {
+            System.err.println("Reservation auto-fulfill error: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
      * Returns all active (PENDING) reservations made by a specific member.
      * Used in the member dashboard to show their reservation list.
      * @param userId ID of the member

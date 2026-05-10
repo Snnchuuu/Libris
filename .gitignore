@@ -33,3 +33,6 @@ Thumbs.db
 
 # Sensitive data 
 .env
+
+# Vaadin generated frontend (auto-build çıktısı)
+Libris/frontend/generated/

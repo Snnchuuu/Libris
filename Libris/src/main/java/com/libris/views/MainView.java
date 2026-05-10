@@ -10,6 +10,8 @@ import com.vaadin.flow.server.VaadinSession;
 
 @Route("") // Boş string kök dizin (http://localhost:8080) demektir
 public class MainView extends VerticalLayout implements BeforeEnterObserver {
+	private static final long serialVersionUID = 1L;
+
 
     @Override
     public void beforeEnter(BeforeEnterEvent event) {
