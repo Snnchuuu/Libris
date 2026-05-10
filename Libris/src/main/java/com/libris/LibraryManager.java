@@ -1,50 +1,58 @@
 package com.libris;
  
-import java.util.ArrayList;
 import java.util.List;
-import java.time.LocalDate;
  
 /*
- * Info:
- * This class is responsible for managing users, authentication and registration.
- * It acts as a central service layer for the library system.
- * It handles user creation, login and username recovery operations.
- * Also provides database-backed item management via DAO classes.
+ * LibraryManager Class
+ * Central service layer for the Libris system.
+ * All operations are persisted in MySQL via DAO classes.
+ * No in-memory lists — everything goes through the database.
  */
- 
 public class LibraryManager {
  
-    private List<User> users;
-    private List<BorrowRecord> borrowRecords;
- 
-    private UserDAO userDAO;
-    private BookDAO bookDAO;
-    private BorrowDAO borrowDAO;
+    // DAO instances — each handles one table in the database
+    private final BookDAO bookDAO;
+    private final BorrowDAO borrowDAO;
+    private final UserDAO userDAO;
+    private final ReservationDAO reservationDAO;
+    private final ReviewDAO reviewDAO;
+    private final WishListDAO wishListDAO;
  
     public LibraryManager() {
-        this.users = new ArrayList<>();
-        this.borrowRecords = new ArrayList<>();
-        this.userDAO  = new UserDAO();
-        this.bookDAO  = new BookDAO();
-        this.borrowDAO = new BorrowDAO();
+        this.bookDAO        = new BookDAO();
+        this.borrowDAO      = new BorrowDAO();
+        this.userDAO        = new UserDAO();
+        this.reservationDAO = new ReservationDAO();
+        this.reviewDAO      = new ReviewDAO();
+        this.wishListDAO    = new WishListDAO();
     }
  
     // ----------------------------------------------------
-    // USER MANAGEMENT SYSTEM
+    // USER OPERATIONS
     // ----------------------------------------------------
  
-    public void addUser(User user) {
-        users.add(user);
-        if (user instanceof Admin) {
-            userDAO.registerUser(user.getUsername(), user.getName(), user.getEmail(), user.getPassword(), "ADMIN");
-        } else {
-            userDAO.registerUser(user.getUsername(), user.getName(), user.getEmail(), user.getPassword(), "MEMBER");
+    /**
+     * Registers a new member in the database.
+     * Used by RegisterView.
+     */
+    public boolean registerUser(String username, String name, String email, String password) {
+        return userDAO.registerUser(username, name, email, password, "MEMBER");
+    }
+ 
+    /**
+     * Logs in a user by checking credentials against the database.
+     * Returns the Member object if successful, null if login fails.
+     */
+    public Member loginMember(String email, String password) {
+        boolean valid = userDAO.loginUser(email, password);
+        if (valid) {
+            return userDAO.getMemberByEmail(email);
         }
-        System.out.println("User added: " + user.getUsername());
+        return null;
     }
  
     // ----------------------------------------------------
-    // ITEM MANAGEMENT — database backed via BookDAO
+    // ITEM OPERATIONS
     // ----------------------------------------------------
  
     /**
@@ -79,14 +87,6 @@ public class LibraryManager {
     }
  
     /**
-     * Legacy method — kept for backward compatibility.
-     * New code should use addItem() instead.
-     */
-    public void addItems(LibraryItem item) {
-        addItem(item);
-    }
- 
-    /**
      * Deletes an item from the database by ID.
      * Only admins should call this.
      */
@@ -107,60 +107,12 @@ public class LibraryManager {
     }
  
     // ----------------------------------------------------
-    // REGISTRATION SYSTEM
-    // ----------------------------------------------------
- 
-    public boolean registerUser(String username, String name, String email, String password) {
-        boolean success = userDAO.registerUser(username, name, email, password, "MEMBER");
- 
-        if (!success) {
-            System.out.println("Error! Registration failed in database.");
-            return false;
-        }
- 
-        Member newUser = new Member(users.size() + 1, username, name, email, password);
-        users.add(newUser);
- 
-        System.out.println("User registered successfully: " + username);
-        return true;
-    }
- 
-    // ----------------------------------------------------
-    // LOGIN SYSTEM
-    // ----------------------------------------------------
- 
-    public User login(String username, String password) {
-        // 1. RAM CHECK (cache-first)
-        for (User u : users) {
-            if (u.getUsername().equals(username) && u.getPassword().equals(password)) {
-                System.out.println("Login from RAM: " + username);
-                return u;
-            }
-        }
- 
-        // 2. DB CHECK (fallback)
-        boolean ok = userDAO.loginUser(username, password);
-        if (!ok) {
-            System.out.println("Login failed!");
-            return null;
-        }
- 
-        Member member = userDAO.getMemberByUsername(username);
-        if (member != null) {
-            users.add(member);
-            System.out.println("Login from DB: " + username);
-            return member;
-        }
- 
-        return null;
-    }
- 
-    // ----------------------------------------------------
-    // BORROW SYSTEM
+    // BORROW OPERATIONS
     // ----------------------------------------------------
  
     /**
      * Processes a borrow request and saves it to the database.
+     * Digital items (EBook, AudioBook) cannot be borrowed physically.
      */
     public void borrowMaterial(Member member, LibraryItem item) {
         if (!(item instanceof Borrowable)) {
@@ -178,6 +130,7 @@ public class LibraryManager {
  
     /**
      * Processes a return and updates the database.
+     * Calculates penalty using the item's own calculatePenalty() method.
      */
     public double returnMaterial(int recordId, Member member, LibraryItem item) {
         double fine = borrowDAO.returnItem(recordId, member, item);
@@ -189,20 +142,99 @@ public class LibraryManager {
         return fine;
     }
  
-    // ----------------------------------------------------
-    // USER SEARCH
-    // ----------------------------------------------------
- 
-    public User findByUsername(String username) {
-        for (User u : users) {
-            if (u.getUsername().equals(username)) {
-                return u;
-            }
-        }
-        return null;
+    /**
+     * Returns all currently borrowed items for a member.
+     */
+    public List<String> getActiveBorrows(int userId) {
+        return borrowDAO.getActiveBorrowsByUser(userId);
     }
  
-    public List<User> getAllUsers() {
-        return users;
+    // ----------------------------------------------------
+    // RESERVATION OPERATIONS
+    // ----------------------------------------------------
+ 
+    /**
+     * Creates a reservation for a member on a fully borrowed item.
+     */
+    public void reserveItem(Member member, LibraryItem item) {
+        boolean success = reservationDAO.createReservation(member.getId(), item.getId());
+        if (success) {
+            System.out.println(member.getName() + " reserved: " + item.getTitle());
+        } else {
+            System.err.println("Reservation failed for: " + item.getTitle());
+        }
+    }
+ 
+    /**
+     * Cancels an existing reservation.
+     */
+    public void cancelReservation(int reservationId) {
+        boolean success = reservationDAO.cancelReservation(reservationId);
+        if (success) {
+            System.out.println("Reservation #" + reservationId + " cancelled.");
+        }
+    }
+ 
+    /**
+     * Returns all active reservations for a member.
+     */
+    public List<String> getActiveReservations(int userId) {
+        return reservationDAO.getActiveReservationsByUser(userId);
+    }
+ 
+    // ----------------------------------------------------
+    // REVIEW OPERATIONS
+    // ----------------------------------------------------
+ 
+    /**
+     * Adds a review for a library item.
+     */
+    public void addReview(Member member, LibraryItem item, int rating, String comment) {
+        boolean success = reviewDAO.addReview(member.getId(), item.getId(), rating, comment);
+        if (success) {
+            System.out.println("Review added by " + member.getName() + " for: " + item.getTitle());
+        } else {
+            System.err.println("Review failed for: " + item.getTitle());
+        }
+    }
+ 
+    /**
+     * Returns all reviews for a specific item.
+     */
+    public List<String> getReviews(int itemId) {
+        return reviewDAO.getReviewsByItem(itemId);
+    }
+ 
+    /**
+     * Returns the average rating for a specific item.
+     */
+    public double getAverageRating(int itemId) {
+        return reviewDAO.getAverageRating(itemId);
+    }
+ 
+    // ----------------------------------------------------
+    // WISHLIST OPERATIONS
+    // ----------------------------------------------------
+ 
+    /**
+     * Adds an item to a member's wish list in the database.
+     */
+    public void addToWishList(Member member, LibraryItem item) {
+        wishListDAO.addItem(member.getId(), item.getId());
+    }
+ 
+    /**
+     * Removes an item from a member's wish list.
+     */
+    public void removeFromWishList(Member member, LibraryItem item) {
+        wishListDAO.removeItem(member.getId(), item.getId());
+    }
+ 
+    /**
+     * Returns all items in a member's wish list.
+     */
+    public List<String> getWishList(int userId) {
+        return wishListDAO.getWishList(userId);
     }
 }
+ 
