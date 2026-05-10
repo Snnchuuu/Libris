@@ -1,3 +1,6 @@
 /target/
 .env
 target/
+
+# Vaadin generated frontend (auto-build çıktısı)
+Libris/frontend/generated/
