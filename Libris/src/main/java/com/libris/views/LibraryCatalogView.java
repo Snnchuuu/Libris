@@ -41,7 +41,7 @@ public class LibraryCatalogView extends VerticalLayout
     private final UserDAO         userDao        = new UserDAO();
     private final ReviewDAO       reviewDao      = new ReviewDAO();
     private final ReservationDAO  reservationDao = new ReservationDAO();
-    private final WishlistDAO     wishlistDao    = new WishlistDAO();
+    private final WishListDAO     wishlistDao    = new WishListDAO();
 
     // Grid'i field olarak tutuyoruz; birden fazla metot erişecek
     private final Grid<LibraryItem> grid = new Grid<>(LibraryItem.class, false);
@@ -693,7 +693,7 @@ public class LibraryCatalogView extends VerticalLayout
 
         // Wishlist (kalp) sütunu — sadece üye görünümünde, fiziksel/digital fark etmez.
         grid.addComponentColumn(item -> {
-            boolean inList = wishlistDao.isInWishlist(userId, item.getId());
+            boolean inList = wishlistDao.isInWishList(userId, item.getId());
             Button heart = new Button(VaadinIcon.HEART.create());
             heart.addThemeVariants(ButtonVariant.LUMO_ICON, ButtonVariant.LUMO_TERTIARY);
             heart.getElement().setProperty("title",
@@ -705,12 +705,12 @@ public class LibraryCatalogView extends VerticalLayout
             heart.addClickListener(e -> {
                 boolean nowIn;
                 if (inList) {
-                    wishlistDao.remove(userId, item.getId());
+                    wishlistDao.removeItem(userId, item.getId());
                     nowIn = false;
                     Notification.show("İstek listesinden çıkarıldı: " + item.getTitle(),
                         2000, Notification.Position.BOTTOM_END);
                 } else {
-                    wishlistDao.add(userId, item.getId());
+                    wishlistDao.addItem(userId, item.getId());
                     nowIn = true;
                     Notification.show("İstek listesine eklendi: " + item.getTitle(),
                         2000, Notification.Position.BOTTOM_END);
