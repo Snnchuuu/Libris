@@ -1,9 +1,7 @@
 package com.libris.views;
-
+ 
 import com.libris.UserDAO;
 import com.libris.Member;
-import com.libris.LibraryManager;
-import com.libris.User;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.html.H1;
 import com.vaadin.flow.component.html.Anchor;
@@ -14,72 +12,69 @@ import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.server.VaadinSession;
-
-// login sayfası
-
+ 
+/**
+ * LoginView
+ * Handles user login with email and password.
+ * Checks credentials against the database,
+ * stores session info, and routes to catalog.
+ */
 @Route("login")
 @PageTitle("Libris - Login")
 public class LoginView extends VerticalLayout {
-
-    private LibraryManager manager = new LibraryManager();
-
-    // 🔥 forgot link artık class level
+ 
+    // Forgot password link (hidden until login fails)
     private Anchor forgotLink = new Anchor("forgot-password", "Hesabımı Unuttum?");
-
+ 
     public LoginView() {
-
         setAlignItems(Alignment.CENTER);
         setJustifyContentMode(JustifyContentMode.CENTER);
         setHeightFull();
-
+ 
         add(new H1("Libris Kütüphane Sistemi"));
-
-        TextField username = new TextField("Kullanıcı Adı");
-        PasswordField password = new PasswordField("Şifre");
+ 
+        // Email field 
+        TextField emailField = new TextField("E-posta");
+        PasswordField passwordField = new PasswordField("Şifre");
         Button loginButton = new Button("Giriş Yap");
-
-        // başlangıçta gizli
+ 
+        // Hide forgot link initially
         forgotLink.setVisible(false);
-
+ 
         loginButton.addClickListener(click -> {
-
-            String user = username.getValue();
-            String pass = password.getValue();
-
+            String email = emailField.getValue();
+            String pass  = passwordField.getValue();
+ 
             UserDAO dao = new UserDAO();
-
-            boolean ok = dao.loginUser(user, pass);
-
+ 
+            // Check credentials using email and password
+            boolean ok = dao.loginUser(email, pass);
+ 
             if (ok) {
-
-                Member member = dao.getMemberByUsername(user);
-
+                // Fetch full user object from database using email
+                Member member = dao.getMemberByEmail(email);
+ 
                 if (member != null) {
-
+                    // Store session attributes for use across views
                     VaadinSession.getCurrent().setAttribute("username", member.getUsername());
                     VaadinSession.getCurrent().setAttribute("role", member.getRole());
-
-                    if ("ADMIN".equals(member.getRole())) {
-                        getUI().ifPresent(ui -> ui.navigate("admin"));
-                    } else {
-                        getUI().ifPresent(ui -> ui.navigate("katalog"));
-                    }
-
+                    VaadinSession.getCurrent().setAttribute("userId", member.getId());
+ 
+                    // Both admin and member go to catalog
+                    // LibraryCatalogView handles admin/member UI differences
+                    getUI().ifPresent(ui -> ui.navigate("katalog"));
+ 
                 } else {
-                    Notification.show("User found but cannot load data!");
+                    Notification.show("Kullanıcı verisi yüklenemedi!");
                 }
-
+ 
             } else {
-                Notification.show("Hatalı kullanıcı adı veya şifre!");
-                forgotLink.setVisible(true); // 🔥 burada göster
+                // Login failed — show error and forgot link
+                Notification.show("Hatalı e-posta veya şifre!");
+                forgotLink.setVisible(true);
             }
         });
-
-        // UI
-        add(username, password, loginButton, forgotLink);
+ 
+        add(emailField, passwordField, loginButton, forgotLink);
     }
-
-    // ----------------------------------------------------
-    // KAYDOL + FORGOT PASSWORD LINKLERİ (istersen sonra ekleriz)
-    // ----------------------------------------------------
 }
