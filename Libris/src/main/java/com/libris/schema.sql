@@ -11,20 +11,19 @@ USE libris_db;
 -- Stores both Admin and Member accounts.
 -- -------------------------------------------------------
 CREATE TABLE IF NOT EXISTS users (
-    user_id        INT AUTO_INCREMENT PRIMARY KEY,
+    user_id       INT AUTO_INCREMENT PRIMARY KEY,
     username       VARCHAR(100)   NOT NULL,
     name           VARCHAR(150)   NOT NULL,
     email          VARCHAR(150)   NOT NULL UNIQUE,
     password       VARCHAR(255)   NOT NULL,          -- Store hashed passwords in production!
     role           ENUM('ADMIN', 'MEMBER') NOT NULL,
-    balance        DOUBLE         NOT NULL DEFAULT 0.0,  -- Penalty balance for members
-    total_delays   INT            NOT NULL DEFAULT 0     -- Total late return count
+    balance        DOUBLE          NOT NULL DEFAULT 0.0,  -- Penalty balance for members
+    total_delays   INT             NOT NULL DEFAULT 0     -- Total late return count
 );
 
 -- -------------------------------------------------------
 -- TABLE: library_items
 -- Stores all material types: Book, EBook, AudioBook, Periodical.
--- The 'item_type' column differentiates between them.
 -- -------------------------------------------------------
 CREATE TABLE IF NOT EXISTS library_items (
     item_id            INT AUTO_INCREMENT PRIMARY KEY,
@@ -37,81 +36,78 @@ CREATE TABLE IF NOT EXISTS library_items (
     item_type          ENUM('BOOK', 'EBOOK', 'AUDIOBOOK', 'PERIODICAL') NOT NULL,
 
     -- Book-specific fields
-    isbn               VARCHAR(20),
-    page_count         INT,
-    genre              VARCHAR(100),
+    isbn                VARCHAR(20),
+    page_count          INT,
+    genre               VARCHAR(100),
 
     -- EBook-specific fields
-    file_format        VARCHAR(20),
-    file_size          DOUBLE,
+    file_format         VARCHAR(20),
+    file_size           DOUBLE,
 
     -- AudioBook-specific fields
-    duration           INT,           -- Duration in minutes
-    narrator           VARCHAR(150),
+    duration            INT,           -- Duration in minutes
+    narrator            VARCHAR(150),
 
     -- Periodical-specific fields
-    issue_number       INT,
-    period             VARCHAR(50)   -- e.g. 'Weekly', 'Monthly'
+    issue_number        INT,
+    period              VARCHAR(50)   -- e.g. 'Weekly', 'Monthly'
 );
 
 -- -------------------------------------------------------
 -- TABLE: borrow_records
 -- Tracks every borrowing transaction.
+-- Updated with ON DELETE CASCADE to allow item deletion.
 -- -------------------------------------------------------
 CREATE TABLE IF NOT EXISTS borrow_records (
     record_id     INT AUTO_INCREMENT PRIMARY KEY,
-    user_id       INT            NOT NULL,
-    item_id       INT            NOT NULL,
-    borrow_date   DATE           NOT NULL,
-    due_date      DATE           NOT NULL,            -- Expected return date (borrow + 15 days)
-    return_date   DATE,                               -- Actual return date (NULL if not returned yet)
-    status        ENUM('BORROWED', 'RETURNED') NOT NULL DEFAULT 'BORROWED',
-    fine_amount   DOUBLE         NOT NULL DEFAULT 0.0, -- Penalty calculated on return
+    user_id        INT            NOT NULL,
+    item_id        INT            NOT NULL,
+    borrow_date    DATE           NOT NULL,
+    due_date       DATE           NOT NULL,            -- Expected return date
+    return_date    DATE,                               -- Actual return date
+    status         ENUM('BORROWED', 'RETURNED') NOT NULL DEFAULT 'BORROWED',
+    fine_amount    DOUBLE          NOT NULL DEFAULT 0.0, 
 
     FOREIGN KEY (user_id) REFERENCES users(user_id),
-    FOREIGN KEY (item_id) REFERENCES library_items(item_id)
+    FOREIGN KEY (item_id) REFERENCES library_items(item_id) ON DELETE CASCADE
 );
 
 -- -------------------------------------------------------
 -- TABLE: reservations
--- Handles item reservations when all copies are borrowed.
+-- Handles item reservations.
 -- -------------------------------------------------------
 CREATE TABLE IF NOT EXISTS reservations (
     reservation_id  INT AUTO_INCREMENT PRIMARY KEY,
-    user_id         INT           NOT NULL,
-    item_id         INT           NOT NULL,
-    request_date    DATE          NOT NULL,
-    status          ENUM('PENDING', 'FULFILLED', 'CANCELLED') NOT NULL DEFAULT 'PENDING',
+    user_id          INT           NOT NULL,
+    item_id          INT           NOT NULL,
+    request_date     DATE          NOT NULL,
+    status           ENUM('PENDING', 'FULFILLED', 'CANCELLED') NOT NULL DEFAULT 'PENDING',
 
     FOREIGN KEY (user_id) REFERENCES users(user_id),
-    FOREIGN KEY (item_id) REFERENCES library_items(item_id)
+    FOREIGN KEY (item_id) REFERENCES library_items(item_id) ON DELETE CASCADE
 );
 
 -- -------------------------------------------------------
 -- TABLE: reviews
--- Stores user reviews and ratings (1-5) for any item.
+-- Stores user reviews and ratings.
 -- -------------------------------------------------------
 CREATE TABLE IF NOT EXISTS reviews (
     review_id    INT AUTO_INCREMENT PRIMARY KEY,
     user_id      INT           NOT NULL,
     item_id      INT           NOT NULL,
-    rating       INT           NOT NULL,              -- Must be between 1 and 5
+    rating       INT           NOT NULL,              -- 1-5
     comment      TEXT,
     review_date  DATE          NOT NULL,
 
     FOREIGN KEY (user_id) REFERENCES users(user_id),
-    FOREIGN KEY (item_id) REFERENCES library_items(item_id),
+    FOREIGN KEY (item_id) REFERENCES library_items(item_id) ON DELETE CASCADE,
 
-    -- A user can only review the same item once
     UNIQUE KEY unique_review (user_id, item_id),
-
-    -- Enforce rating range at the database level
     CONSTRAINT chk_rating CHECK (rating BETWEEN 1 AND 5)
 );
 
 -- -------------------------------------------------------
 -- TABLE: wish_list
--- Stores each member's personal wish list of library items.
 -- -------------------------------------------------------
 CREATE TABLE IF NOT EXISTS wish_list (
     wish_id     INT AUTO_INCREMENT PRIMARY KEY,
@@ -120,37 +116,31 @@ CREATE TABLE IF NOT EXISTS wish_list (
     added_date  DATE NOT NULL,
 
     FOREIGN KEY (user_id) REFERENCES users(user_id),
-    FOREIGN KEY (item_id) REFERENCES library_items(item_id),
+    FOREIGN KEY (item_id) REFERENCES library_items(item_id) ON DELETE CASCADE,
 
     UNIQUE KEY unique_wish (user_id, item_id)
 );
 
 -- -------------------------------------------------------
--- Sample Data (optional - for testing)
+-- Sample Data
 -- -------------------------------------------------------
 
--- Admin user
 INSERT INTO users (username, name, email, password, role) VALUES
 ('ahmetadmin', 'Ahmet Yilmaz', 'ahmet@libris.com', 'admin123', 'ADMIN');
 
--- Member users
 INSERT INTO users (username, name, email, password, role, balance, total_delays) VALUES
 ('cantek', 'Can Tekin',  'can@mail.com',  'pass123', 'MEMBER', 0.0, 0),
 ('elifdemir', 'Elif Demir', 'elif@mail.com', 'pass456', 'MEMBER', 0.0, 0);
 
--- Sample books
 INSERT INTO library_items (title, author, publication_year, copy_count, available_copies, status, item_type, isbn, page_count, genre) VALUES
 ('Java Programming', 'Deitel',                    2024, 5, 5, 'Available', 'BOOK', '123-456', 800, 'Education'),
 ('Araba Sevdasi',    'Recaizade Mahmut Ekrem',    1875, 3, 3, 'Available', 'BOOK', '456-789', 276, 'Novel');
 
--- Sample EBook
 INSERT INTO library_items (title, author, publication_year, copy_count, available_copies, status, item_type, file_format, file_size) VALUES
 ('Digital Trends', 'AI Expert', 2025, 1, 1, 'Available', 'EBOOK', 'PDF', 15.5);
 
--- Sample AudioBook
 INSERT INTO library_items (title, author, publication_year, copy_count, available_copies, status, item_type, duration, narrator) VALUES
 ('Sapiens', 'Harari', 2014, 2, 2, 'Available', 'AUDIOBOOK', 900, 'John Smith');
 
--- Sample Periodical
 INSERT INTO library_items (title, author, publication_year, copy_count, available_copies, status, item_type, issue_number, period) VALUES
 ('Science Weekly', 'Global Science', 2026, 10, 10, 'Available', 'PERIODICAL', 45, 'Weekly');
