@@ -2,6 +2,7 @@ package com.libris.views;
 
 import com.libris.LibraryManager;
 import com.vaadin.flow.component.UI;
+import com.vaadin.flow.component.dependency.StyleSheet;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.html.H1;
@@ -12,6 +13,9 @@ import com.vaadin.flow.component.textfield.PasswordField;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.router.PageTitle;
+
+@StyleSheet("styles/styles.css")
+
 
 /* Info:
  * This class represents the user registration page.
@@ -38,7 +42,7 @@ public class RegisterView extends VerticalLayout {
 
         // Fields
         TextField username = new TextField("Username");
-        TextField name = new TextField("Full Name"); // ✅ EKLENDİ
+        TextField name = new TextField("Full Name"); 
         TextField email = new TextField("Email");
         PasswordField password = new PasswordField("Password");
 
@@ -47,7 +51,7 @@ public class RegisterView extends VerticalLayout {
         registerButton.addClickListener(e -> {
 
             String u = username.getValue();
-            String n = name.getValue(); // ✅ EKLENDİ
+            String n = name.getValue(); 
             String em = email.getValue();
             String pw = password.getValue();
 
@@ -57,7 +61,7 @@ public class RegisterView extends VerticalLayout {
                 return;
             }
 
-            // ⚠️ BURASI ÖNEMLİ: artık name de gönderilmeli
+            
             boolean success = manager.registerUser(u, n, em, pw);
 
             if (success) {

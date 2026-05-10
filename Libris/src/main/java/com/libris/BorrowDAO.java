@@ -42,7 +42,7 @@ public class BorrowDAO {
 
     /**
      * Yeni bir ödünç alma kaydı oluşturur.
-     * borrow_date: bugün, due_date: 14 gün sonra (2 haftalık standart süre)
+     * borrow_date: şu an, due_date: 3 dakika sonra (TEST modu).
      *
      * @param userId Ödünç alan üyenin ID'si
      * @param itemId Ödünç alınan kitabın ID'si
@@ -55,13 +55,13 @@ public class BorrowDAO {
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
-        	Timestamp now = new Timestamp(System.currentTimeMillis());
-        	Timestamp dueDate = new Timestamp(System.currentTimeMillis() + 3 * 60 * 1000);
+            Timestamp now = new Timestamp(System.currentTimeMillis());
+            Timestamp dueDate = new Timestamp(System.currentTimeMillis() + 3 * 60 * 1000);
 
-        	pstmt.setInt(1, userId);
-        	pstmt.setInt(2, itemId);
-        	pstmt.setTimestamp(3, now);
-        	pstmt.setTimestamp(4, dueDate);
+            pstmt.setInt(1, userId);
+            pstmt.setInt(2, itemId);
+            pstmt.setTimestamp(3, now);
+            pstmt.setTimestamp(4, dueDate);
 
             return pstmt.executeUpdate() > 0;
 
@@ -70,10 +70,10 @@ public class BorrowDAO {
             return false;
         }
     }
+
     /**
-     * Kullanıcının ödünç aldığı kitabı iade eder.
-     * return_date bugünün tarihi olur
-     * status = RETURNED yapılır
+     * Eski tip iade — sadece status'ü RETURNED yapar, ceza hesaplamaz.
+     * Yeni kod {@link #returnAndPenalize(int, int)} kullanmalı.
      *
      * @param userId İade eden üyenin ID'si
      * @param itemId İade edilen kitabın ID'si
@@ -106,7 +106,7 @@ public class BorrowDAO {
         public final boolean success;
         public final double fineAmount;       // bu iadeden uygulanan ceza
         public final long   unitsLate;        // kaç dakika geç (PenaltyService.unitsLate)
-        public final double newBalance;      // güncel toplam bakiye
+        public final double newBalance;       // güncel toplam bakiye
 
         public ReturnResult(boolean success, double fineAmount, long unitsLate, double newBalance) {
             this.success    = success;

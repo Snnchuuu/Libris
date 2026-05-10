@@ -1,10 +1,14 @@
 package com.libris.views;
 
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.component.dependency.StyleSheet;
 import com.vaadin.flow.router.BeforeEnterEvent;
 import com.vaadin.flow.router.BeforeEnterObserver;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.VaadinSession;
+
+@StyleSheet("styles/styles.css")
+
 
 // bu sınıfın tek amacı kök dizine girildiğinde yönlendirme yapmaktır
 

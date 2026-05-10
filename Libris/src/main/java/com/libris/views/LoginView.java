@@ -1,83 +1,95 @@
 package com.libris.views;
-
+ 
 import com.libris.UserDAO;
 import com.libris.Member;
-import com.libris.LibraryManager;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.html.H1;
+import com.vaadin.flow.component.html.Image;
 import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
-import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.textfield.PasswordField;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.server.VaadinSession;
 
-// Giriş sayfası — kullanıcı adı ve şifre ile oturum açılır.
-// Hatalı girişte "Hesabımı Unuttum" linki belirir.
-// Altında kayıt sayfasına yönlendiren link bulunur.
-
+/**
+ * LoginView
+ * Handles user login with email and password.
+ * Shows Libris logo and routes to catalog after successful login.
+ */
 @Route("login")
-@PageTitle("Libris - Login")
+@PageTitle("Libris - Giriş")
 public class LoginView extends VerticalLayout {
     private static final long serialVersionUID = 1L;
 
     // Hatalı girişte gösterilecek link — başta gizli
     private Anchor forgotLink = new Anchor("forgot-password", "Hesabımı Unuttum?");
-
+ 
     public LoginView() {
         setAlignItems(Alignment.CENTER);
         setJustifyContentMode(JustifyContentMode.CENTER);
         setHeightFull();
 
-        add(new H1("Libris Kütüphane Sistemi"));
+        // Logo
+        Image logo = new Image("images/logo.png", "Libris Logo");
+        logo.setHeight("180px");
+        logo.getStyle().set("margin-bottom", "8px");
 
-        TextField username     = new TextField("Kullanıcı Adı");
-        PasswordField password = new PasswordField("Şifre");
-        Button loginButton     = new Button("Giriş Yap");
+        // Title
+        H1 title = new H1("Libris Kütüphane Sistemi");
+        title.getStyle()
+            .set("font-size", "1.8rem")
+            .set("margin-top", "0")
+            .set("margin-bottom", "24px")
+            .set("color", "#4A3010");
 
-        // Hatalı giriş yapılana kadar gizli kalır
+        // Input fields
+        TextField emailField = new TextField("E-posta");
+        emailField.setWidth("320px");
+
+        PasswordField passwordField = new PasswordField("Şifre");
+        passwordField.setWidth("320px");
+
+        Button loginButton = new Button("Giriş Yap");
+        loginButton.setWidth("320px");
+        loginButton.getStyle()
+            .set("margin-top", "8px")
+            .set("height", "42px");
+        loginButton.addThemeVariants(com.vaadin.flow.component.button.ButtonVariant.LUMO_PRIMARY);
+
+        // Register link
+        Anchor registerLink = new Anchor("register", "Hesabın yok mu? Kayıt ol");
+        registerLink.getStyle().set("margin-top", "8px").set("color", "#7A5520");
+
         forgotLink.setVisible(false);
-
+        forgotLink.getStyle().set("color", "#7A5520");
+ 
         loginButton.addClickListener(click -> {
-            String user = username.getValue();
-            String pass = password.getValue();
+            String email = emailField.getValue();
+            String pass  = passwordField.getValue();
 
             UserDAO dao = new UserDAO();
-            boolean ok  = dao.loginUser(user, pass);
+            boolean ok  = dao.loginUser(email, pass);
 
             if (ok) {
-                Member member = dao.getMemberByUsername(user);
+                Member member = dao.getMemberByEmail(email);
 
                 if (member != null) {
-                    // Oturum bilgilerini session'a kaydet
                     VaadinSession.getCurrent().setAttribute("username", member.getUsername());
-                    VaadinSession.getCurrent().setAttribute("role",     member.getRole());
-
-                    // Admin ve üye aynı sayfaya gidiyor;
-                    // içerik katalog sayfasında role göre ayrışıyor
+                    VaadinSession.getCurrent().setAttribute("role", member.getRole());
+                    VaadinSession.getCurrent().setAttribute("userId", member.getId());
                     getUI().ifPresent(ui -> ui.navigate("katalog"));
                 } else {
-                    Notification.show("Kullanıcı bulundu fakat veriler yüklenemedi!");
+                    Notification.show("Kullanıcı verisi yüklenemedi!");
                 }
             } else {
-                // Hatalı girişte şifre hatırlatma linkini göster
-                Notification.show("Hatalı kullanıcı adı veya şifre!");
+                Notification.show("Hatalı e-posta veya şifre!");
                 forgotLink.setVisible(true);
             }
         });
 
-        // "Hesap oluştur" linki — RegisterView'a yönlendirir
-        // HorizontalLayout ile "Hesabın yok mu?" yazısı ve link yan yana durur
-        HorizontalLayout registerRow = new HorizontalLayout();
-        registerRow.setAlignItems(Alignment.CENTER);
-
-        Anchor registerLink = new Anchor("register", "Kayıt Ol");
-        registerRow.add(registerLink);
-
-        // Bileşenleri sırayla ekle
-        add(username, password, loginButton, forgotLink, registerRow);
+        add(logo, title, emailField, passwordField, loginButton, forgotLink, registerLink);
     }
 }

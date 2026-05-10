@@ -1,6 +1,7 @@
 package com.libris.views;
 
 import com.libris.UserDAO;
+import com.vaadin.flow.component.dependency.StyleSheet;
 import com.libris.Member;
 import com.libris.EmailService;
 import com.vaadin.flow.component.button.Button;
@@ -11,6 +12,8 @@ import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.router.PageTitle;
+
+@StyleSheet("styles/styles.css")
 
 /*
  * Info:
