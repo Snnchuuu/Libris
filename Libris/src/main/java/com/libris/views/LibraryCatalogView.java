@@ -138,16 +138,25 @@ public class LibraryCatalogView extends VerticalLayout implements BeforeEnterObs
             Grid<LibraryItem> catalogGrid = buildCatalogGrid(isAdmin, userId);
  
             deleteBtn.addClickListener(e -> {
-                catalogGrid.asSingleSelect().getOptionalValue().ifPresent(selectedItem -> {
-                    manager.deleteItem(selectedItem.getId());
-                    items = manager.getAllItems();
-                    catalogGrid.setItems(items);
-                    Notification.show(selectedItem.getTitle() + " sistemden kaldırıldı.");
-                });
-                if (catalogGrid.asSingleSelect().isEmpty()) {
-                    Notification.show("Lütfen silmek istediğiniz kitabı tablodan seçin!");
-                }
-            });
+    // 1. Seçili öğeyi en başta alıp var mı yok mu diye kontrol ediyoruz
+    catalogGrid.asSingleSelect().getOptionalValue().ifPresentOrElse(selectedItem -> {
+        // --- SEÇİM VARSA ÇALIŞACAK KISIM ---
+        
+        // Backend'den sil
+        manager.deleteItem(selectedItem.getId());
+        
+        // Listeyi güncelle ve Grid'e tekrar bas
+        items = manager.getAllItems();
+        catalogGrid.setItems(items);
+        
+        // Başarı mesajı
+        Notification.show(selectedItem.getTitle() + " sistemden kaldırıldı.", 3000, Notification.Position.TOP_END);
+        
+    }, () -> {
+        // --- SEÇİM YOKSA ÇALIŞACAK KISIM ---
+        Notification.show("Lütfen silmek istediğiniz kitabı tablodan seçin!", 3000, Notification.Position.MIDDLE);
+    });
+});
  
             addBtn.addClickListener(e -> {
                 Dialog dialog = new Dialog();
