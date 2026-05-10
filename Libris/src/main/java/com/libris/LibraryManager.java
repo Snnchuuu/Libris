@@ -130,23 +130,48 @@ public class LibraryManager {
  
     /**
      * Processes a return and updates the database.
-     * Calculates penalty using the item's own calculatePenalty() method.
+     * Calculates penalty via {@link BorrowDAO#returnAndPenalize(int, int)}.
+     * recordId parametresi backward-compat için duruyor; iç işleyiş user_id + item_id ile hallediliyor.
      */
     public double returnMaterial(int recordId, Member member, LibraryItem item) {
-        double fine = borrowDAO.returnItem(recordId, member, item);
-        if (fine > 0) {
-            System.out.println("Late return — Fine: " + fine + " TL");
-        } else {
+        BorrowDAO.ReturnResult result = borrowDAO.returnAndPenalize(member.getId(), item.getId());
+        if (result.fineAmount > 0) {
+            System.out.println("Late return — Fine: " + result.fineAmount + " TL ("
+                + result.unitsLate + " " + PenaltyService.UNIT_LABEL + " late)");
+        } else if (result.success) {
             System.out.println("Returned on time.");
+        } else {
+            System.err.println("Return failed for: " + item.getTitle());
         }
-        return fine;
+        return result.fineAmount;
     }
- 
+
     /**
-     * Returns all currently borrowed items for a member.
+     * Returns all currently borrowed items for a member as formatted strings.
+     * Inline SQL — BorrowDAO'da public bir karşılığı yok, basit raporlama amaçlı.
      */
     public List<String> getActiveBorrows(int userId) {
-        return borrowDAO.getActiveBorrowsByUser(userId);
+        java.util.List<String> records = new java.util.ArrayList<>();
+        String sql =
+            "SELECT br.record_id, li.title, br.due_date " +
+            "FROM borrow_records br " +
+            "JOIN library_items li ON br.item_id = li.item_id " +
+            "WHERE br.user_id = ? AND br.status = 'BORROWED' AND br.return_date IS NULL " +
+            "ORDER BY br.borrow_date DESC";
+
+        try (java.sql.Connection conn = DatabaseManager.getConnection();
+             java.sql.PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, userId);
+            java.sql.ResultSet rs = pstmt.executeQuery();
+            while (rs.next()) {
+                records.add("Record #" + rs.getInt("record_id")
+                    + " | " + rs.getString("title")
+                    + " | Due: " + rs.getTimestamp("due_date"));
+            }
+        } catch (java.sql.SQLException e) {
+            System.err.println("Error fetching active borrows: " + e.getMessage());
+        }
+        return records;
     }
  
     // ----------------------------------------------------

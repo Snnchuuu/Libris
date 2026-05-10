@@ -16,14 +16,12 @@ html {
     --libris-light:       #FDFAF5;
     --libris-border:      #E0D0B0;
     --libris-hover:       #F0E8D5;
-
-    background-color: var(--libris-cream) !important;
-    font-family: 'Lato', sans-serif;
-    color: var(--libris-brown);
 }
 
 body {
     background-color: var(--libris-cream) !important;
+    color: var(--libris-brown);
+    font-family: 'Lato', sans-serif;
 }
 
 /* -------------------------------------------------------
@@ -123,14 +121,20 @@ vaadin-grid::part(row):nth-child(even) {
 }
 
 /* -------------------------------------------------------
-   NOTIFICATIONS
+   NOTIFICATIONS — kontrastlı, basit, literal renkler kullanılıyor.
    ------------------------------------------------------- */
 vaadin-notification-card {
-    background-color: var(--libris-dark-gold) !important;
-    color: #FDF8F0 !important;
-    border-radius: 10px;
+    color: #2C1810 !important;
+    background-color: #FFFFFF !important;
+    border: 1px solid #C4973A !important;
+    border-radius: 8px;
+    padding: 12px 16px;
     font-family: 'Lato', sans-serif;
-    box-shadow: 0 4px 16px rgba(74, 48, 16, 0.2);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+vaadin-notification-card * {
+    color: #2C1810 !important;
 }
 
 /* -------------------------------------------------------

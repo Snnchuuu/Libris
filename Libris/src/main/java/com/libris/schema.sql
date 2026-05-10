@@ -112,9 +112,9 @@ CREATE TABLE IF NOT EXISTS reviews (
 -- -------------------------------------------------------
 CREATE TABLE IF NOT EXISTS wish_list (
     wish_id     INT AUTO_INCREMENT PRIMARY KEY,
-    user_id     INT  NOT NULL,
-    item_id     INT  NOT NULL,
-    added_date  DATE NOT NULL,
+    user_id     INT       NOT NULL,
+    item_id     INT       NOT NULL,
+    added_date  DATETIME  NOT NULL,
 
     FOREIGN KEY (user_id) REFERENCES users(user_id),
     FOREIGN KEY (item_id) REFERENCES library_items(item_id) ON DELETE CASCADE,

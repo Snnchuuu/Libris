@@ -1,7 +1,6 @@
 package com.libris;
  
 import java.sql.*;
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
  
@@ -27,8 +26,9 @@ public class WishListDAO {
  
             pstmt.setInt(1, userId);
             pstmt.setInt(2, itemId);
-            pstmt.setDate(3, Date.valueOf(LocalDate.now()));
- 
+            // Saat-dakika dahil olsun diye Timestamp kullanıyoruz (kolon DATETIME)
+            pstmt.setTimestamp(3, new Timestamp(System.currentTimeMillis()));
+
             return pstmt.executeUpdate() > 0;
  
         } catch (SQLException e) {
