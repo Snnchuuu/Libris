@@ -1,95 +1,137 @@
 /* ============================================================
-   Libris - Global Theme
-   Soft, warm library aesthetic inspired by the logo
+   Libris — Global Theme
+   Sıcak, kütüphane estetiği. Vaadin Lumo teması üzerine inşa.
    ============================================================ */
 
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Lato:wght@300;400;700&display=swap');
 
 /* -------------------------------------------------------
-   ROOT VARIABLES
+   CSS DEĞİŞKENLERİ — :root düzeyinde, her yerden erişilebilir.
    ------------------------------------------------------- */
-html {
-    --libris-cream:       #FAF6EF;
-    --libris-gold:        #C4973A;
-    --libris-dark-gold:   #7A5520;
-    --libris-brown:       #4A3010;
-    --libris-light:       #FDFAF5;
-    --libris-border:      #E0D0B0;
-    --libris-hover:       #F0E8D5;
-}
-
-body {
-    background-color: var(--libris-cream) !important;
-    color: var(--libris-brown);
-    font-family: 'Lato', sans-serif;
+:root {
+    --libris-cream:      #FAF6EF;
+    --libris-light:      #FDFAF5;
+    --libris-gold:       #C4973A;
+    --libris-dark-gold:  #7A5520;
+    --libris-brown:      #4A3010;
+    --libris-darkbrown:  #2C1810;
+    --libris-border:     #E0D0B0;
+    --libris-hover:      #F0E8D5;
+    --libris-success:    #5A8A6A;
+    --libris-error:      #B0413E;
 }
 
 /* -------------------------------------------------------
-   HEADINGS
+   GENEL ARKA PLAN — sadece body'de, html'e dokunmuyoruz ki
+   Vaadin overlay'leri (notification, dialog) etkilenmesin.
+   ------------------------------------------------------- */
+body {
+    background-color: var(--libris-cream);
+    font-family: 'Lato', sans-serif;
+    color: var(--libris-darkbrown);
+    margin: 0;
+}
+
+/* -------------------------------------------------------
+   BAŞLIKLAR
    ------------------------------------------------------- */
 h1, h2, h3, h4, h5, h6 {
     font-family: 'Playfair Display', serif;
     color: var(--libris-brown);
     font-weight: 600;
+    letter-spacing: 0.3px;
 }
 
 /* -------------------------------------------------------
-   BUTTONS — Primary
+   BUTONLAR
+   Lumo theme variant'larını respect ederek style ekliyoruz.
    ------------------------------------------------------- */
 vaadin-button[theme~="primary"] {
-    background-color: var(--libris-dark-gold) !important;
-    color: #FDF8F0 !important;
+    background-color: var(--libris-dark-gold);
+    color: #FFFFFF;
     border-radius: 8px;
     font-family: 'Lato', sans-serif;
     font-weight: 600;
     letter-spacing: 0.3px;
     box-shadow: 0 2px 6px rgba(122, 85, 32, 0.2);
-    transition: background-color 0.2s ease;
+    transition: background-color 0.2s ease, transform 0.1s ease;
 }
 
 vaadin-button[theme~="primary"]:hover {
-    background-color: var(--libris-brown) !important;
+    background-color: var(--libris-brown);
+    transform: translateY(-1px);
 }
 
-/* -------------------------------------------------------
-   BUTTONS — Success (İade Et)
-   ------------------------------------------------------- */
+vaadin-button[theme~="primary"]:active {
+    transform: translateY(0);
+}
+
 vaadin-button[theme~="success"] {
-    background-color: #5A8A6A !important;
-    color: white !important;
+    background-color: var(--libris-success);
+    color: #FFFFFF;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(90, 138, 106, 0.2);
 }
 
-/* -------------------------------------------------------
-   BUTTONS — Error
-   ------------------------------------------------------- */
 vaadin-button[theme~="error"] {
     border-radius: 8px;
+    color: var(--libris-error);
+}
+
+vaadin-button[theme~="tertiary"] {
+    color: var(--libris-dark-gold);
+    border-radius: 6px;
+}
+
+vaadin-button[theme~="tertiary"]:hover {
+    background-color: var(--libris-hover);
 }
 
 /* -------------------------------------------------------
-   TEXT FIELDS & INPUTS
+   FORM ELEMANLARI — input, password, textarea
    ------------------------------------------------------- */
+vaadin-text-field,
+vaadin-password-field,
+vaadin-text-area,
+vaadin-select,
+vaadin-email-field {
+    --lumo-contrast-10pct: var(--libris-border);
+    --lumo-primary-color: var(--libris-dark-gold);
+}
+
 vaadin-text-field::part(input-field),
-vaadin-password-field::part(input-field) {
+vaadin-password-field::part(input-field),
+vaadin-text-area::part(input-field),
+vaadin-email-field::part(input-field) {
     background-color: var(--libris-light);
     border: 1px solid var(--libris-border);
     border-radius: 8px;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 vaadin-text-field[focused]::part(input-field),
-vaadin-password-field[focused]::part(input-field) {
+vaadin-password-field[focused]::part(input-field),
+vaadin-text-area[focused]::part(input-field),
+vaadin-email-field[focused]::part(input-field) {
     border-color: var(--libris-gold);
-    box-shadow: 0 0 0 2px rgba(196, 151, 58, 0.15);
+    box-shadow: 0 0 0 3px rgba(196, 151, 58, 0.15);
+}
+
+vaadin-text-field::part(label),
+vaadin-password-field::part(label),
+vaadin-text-area::part(label),
+vaadin-email-field::part(label) {
+    color: var(--libris-brown);
+    font-weight: 600;
+    font-size: 0.9rem;
 }
 
 /* -------------------------------------------------------
-   GRID (TABLE)
+   GRID (TABLO)
    ------------------------------------------------------- */
 vaadin-grid {
-    background-color: var(--libris-light) !important;
-    border: 1px solid var(--libris-border) !important;
+    background-color: var(--libris-light);
+    border: 1px solid var(--libris-border);
     border-radius: 10px;
     font-family: 'Lato', sans-serif;
     box-shadow: 0 2px 12px rgba(74, 48, 16, 0.08);
@@ -97,57 +139,138 @@ vaadin-grid {
 }
 
 vaadin-grid-cell-content {
-    color: var(--libris-brown);
-    font-size: 0.9rem;
+    color: var(--libris-darkbrown);
+    font-size: 0.92rem;
+    padding: 10px 14px;
 }
 
 vaadin-grid::part(header-cell) {
-    background-color: var(--libris-dark-gold) !important;
-    color: #FDF8F0 !important;
+    background-color: var(--libris-dark-gold);
+    color: #FFFFFF;
     font-family: 'Lato', sans-serif;
     font-weight: 700;
-    font-size: 0.85rem;
-    letter-spacing: 0.5px;
+    font-size: 0.82rem;
+    letter-spacing: 0.6px;
     text-transform: uppercase;
 }
 
 vaadin-grid::part(row):hover {
-    background-color: var(--libris-hover) !important;
-    cursor: pointer;
+    background-color: var(--libris-hover);
 }
 
-vaadin-grid::part(row):nth-child(even) {
-    background-color: #F7F2E8;
+vaadin-grid::part(row).overdue-row {
+    background-color: #FFE5E5;
+    color: #B00020;
 }
 
 /* -------------------------------------------------------
-   NOTIFICATIONS — kontrastlı, basit, literal renkler kullanılıyor.
+   NOTIFICATION (mesaj balonu)
+   Bu Vaadin versiyonunda card light DOM'da render oluyor (shadow yok),
+   ::part() çalışmıyor. Bu yüzden direkt element üzerinde stillendiriyoruz.
    ------------------------------------------------------- */
 vaadin-notification-card {
+    background: #FFFFFF !important;
     color: #2C1810 !important;
-    background-color: #FFFFFF !important;
-    border: 1px solid #C4973A !important;
-    border-radius: 8px;
-    padding: 12px 16px;
-    font-family: 'Lato', sans-serif;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-}
-
-vaadin-notification-card * {
-    color: #2C1810 !important;
+    border: 1px solid var(--libris-dark-gold) !important;
+    border-radius: 10px !important;
+    padding: 14px 20px !important;
+    box-shadow: 0 6px 20px rgba(74, 48, 16, 0.2) !important;
+    font-family: 'Lato', sans-serif !important;
+    font-size: 0.95rem !important;
+    font-weight: 500 !important;
+    line-height: 1.4 !important;
+    display: inline-block !important;
+    min-width: 220px;
+    max-width: 480px;
 }
 
 /* -------------------------------------------------------
    DIALOG (popup)
    ------------------------------------------------------- */
 vaadin-dialog-overlay::part(overlay) {
-    background-color: var(--libris-light) !important;
+    background-color: var(--libris-light);
     border: 1px solid var(--libris-border);
     border-radius: 14px;
-    box-shadow: 0 8px 32px rgba(74, 48, 16, 0.15);
+    box-shadow: 0 8px 32px rgba(74, 48, 16, 0.18);
 }
 
-vaadin-dialog-overlay::part(title) {
-    font-family: 'Playfair Display', serif;
+vaadin-dialog-overlay::part(header),
+vaadin-dialog-overlay::part(content),
+vaadin-dialog-overlay::part(footer) {
+    color: var(--libris-darkbrown);
+}
+
+vaadin-dialog-overlay::part(header) {
+    border-bottom: 1px solid var(--libris-border);
+    background-color: var(--libris-cream);
+}
+
+vaadin-dialog-overlay h2,
+vaadin-dialog-overlay h3 {
     color: var(--libris-brown);
+    margin: 0;
+}
+
+/* -------------------------------------------------------
+   ICONS
+   ------------------------------------------------------- */
+vaadin-icon {
+    color: var(--libris-dark-gold);
+}
+
+vaadin-button[theme~="primary"] vaadin-icon,
+vaadin-button[theme~="success"] vaadin-icon {
+    color: #FFFFFF;
+}
+
+/* -------------------------------------------------------
+   LINKLER (a, anchor)
+   ------------------------------------------------------- */
+a {
+    color: var(--libris-dark-gold);
+    text-decoration: none;
+    transition: color 0.15s ease;
+}
+
+a:hover {
+    color: var(--libris-brown);
+    text-decoration: underline;
+}
+
+/* -------------------------------------------------------
+   LOGIN/REGISTER GİBİ ORTALANMIŞ FORMLAR İÇİN
+   Vertical layout center → kart benzeri görünüm.
+   ------------------------------------------------------- */
+vaadin-vertical-layout[theme~="centered"],
+vaadin-vertical-layout.centered {
+    background: linear-gradient(135deg, var(--libris-cream) 0%, var(--libris-hover) 100%);
+}
+
+/* -------------------------------------------------------
+   SCROLLBAR — Webkit browsers (Safari/Chrome)
+   ------------------------------------------------------- */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--libris-cream);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--libris-border);
+    border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--libris-gold);
+}
+
+/* -------------------------------------------------------
+   DETAY: Image (logo)
+   ------------------------------------------------------- */
+img {
+    max-width: 100%;
+    height: auto;
 }
