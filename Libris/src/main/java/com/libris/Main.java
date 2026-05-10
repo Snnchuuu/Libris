@@ -32,11 +32,11 @@ public class Main {
         System.out.println(abook1);
         System.out.println(mag1);
  
-        // Testing login — uses username, not email
+        // Testing login — uses username
         System.out.println("\n--- login test ---");
-        admin.login("ahmetadmin", "admin123");       // success
-        member1.login("cantek", "wrongpass");        // fail
-        member1.login("cantek", "pass123");          // success
+        admin.login("ahmetadmin", "admin123");   // success
+        member1.login("cantek", "wrongpass");    // fail
+        member1.login("cantek", "pass123");      // success
  
         // Testing dashboard (polymorphism)
         System.out.println("\n--- dashboard test ---");
@@ -48,8 +48,8 @@ public class Main {
  
         // Testing borrow
         System.out.println("\n--- borrow test ---");
-        manager.borrowMaterial(member1, book1);   // success — saved to DB
-        manager.borrowMaterial(member1, ebook1);  // fail — digital item
+        manager.borrowMaterial(member1, book1);  // success — saved to DB
+        manager.borrowMaterial(member1, ebook1); // fail — digital item
  
         // Testing penalty — in-memory calculation
         System.out.println("\n--- penalty test ---");
@@ -83,6 +83,22 @@ public class Main {
         ebook1.search("Digital");
         abook1.search("Sapiens");
  
+        // Testing WishList
+        System.out.println("\n--- wishlist test ---");
+        WishList wishList = new WishList(1, member1);
+        wishList.addItem(book1);
+        wishList.addItem(ebook1);
+        wishList.addItem(book1); // Should print: already in wishlist
+        wishList.removeItem(ebook1);
+        System.out.println(wishList);
+ 
+        // Testing Notification
+        System.out.println("\n--- notification test ---");
+        Notification notif = new Notification(1, member1, "Your reserved item is now available!");
+        System.out.println(notif);
+        notif.markAsRead();
+        System.out.println("Is read: " + notif.getIsRead());
+ 
         // Testing exception handling
         System.out.println("\n--- exception handling test ---");
         try {
@@ -93,6 +109,12 @@ public class Main {
  
         try {
             Review badReview = new Review(1, member1, book1, 8, "Too high rating");
+        } catch (IllegalArgumentException e) {
+            System.out.println("Error! : " + e.getMessage());
+        }
+ 
+        try {
+            Notification badNotif = new Notification(-1, member1, "test");
         } catch (IllegalArgumentException e) {
             System.out.println("Error! : " + e.getMessage());
         }
