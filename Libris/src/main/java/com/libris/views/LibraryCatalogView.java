@@ -6,6 +6,9 @@ import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.component.html.H3;
+import com.vaadin.flow.component.html.H4;
+import com.vaadin.flow.component.html.Image;
+import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.router.BeforeEnterEvent;
@@ -13,66 +16,114 @@ import com.vaadin.flow.router.BeforeEnterObserver;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
-import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.button.ButtonVariant;
+import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.server.VaadinSession;
 import java.util.List;
- 
-// Catalog page — shows all library items, handles borrow/add/delete
  
 @Route("katalog")
 public class LibraryCatalogView extends VerticalLayout implements BeforeEnterObserver {
  
-    // LibraryManager handles all database communication via DAOs
     private LibraryManager manager = new LibraryManager();
- 
-    // Item list loaded fresh from the database each time (not static!)
+    private BorrowDAO borrowDAO = new BorrowDAO();
     private List<LibraryItem> items;
  
     public LibraryCatalogView() {
         setSizeFull();
+        setPadding(false);
+        setSpacing(false);
  
-        // Get session info
         String role       = (String) VaadinSession.getCurrent().getAttribute("role");
         String activeUser = (String) VaadinSession.getCurrent().getAttribute("username");
         Integer userId    = (Integer) VaadinSession.getCurrent().getAttribute("userId");
         boolean isAdmin   = "ADMIN".equals(role);
  
-        // Load items fresh from the database — not static, not shared between users
         items = manager.getAllItems();
  
-        // Grid setup
-        Grid<LibraryItem> grid = new Grid<>(LibraryItem.class, false);
-        grid.addColumn(LibraryItem::getTitle).setHeader("Kitap Adı");
-        grid.addColumn(LibraryItem::getAuthor).setHeader("Yazar");
-        grid.addColumn(LibraryItem::getPublicationYear).setHeader("Yayın Yılı");
-        grid.addColumn(LibraryItem::getStatus).setHeader("Durum");
-        grid.addColumn(item -> item.getClass().getSimpleName()).setHeader("Tür");
-        grid.setItems(items);
-        grid.setSizeFull();
- 
-        // Header with welcome message and logout button
+        // -------------------------------------------------------
+        // HEADER — logo + welcome + logout
+        // -------------------------------------------------------
         HorizontalLayout header = new HorizontalLayout();
         header.setWidthFull();
         header.setAlignItems(Alignment.CENTER);
+        header.setPadding(true);
+        header.getStyle()
+        .set("background-color", "#E8DFC8")  // antik parşömen
+        .set("border-bottom", "2px solid #7A5520")
+        .set("padding", "10px 20px")
+        .set("box-shadow", "0 2px 8px rgba(74,48,16,0.15)");
  
-        H3 welcomeText = new H3("Kütüphane Sistemi - Hoş geldin, " + (activeUser != null ? activeUser : "Misafir"));
+        // Logo — sol üst köşe
+        Image logo = new Image("images/logo.png", "Libris");
+        logo.setHeight("48px");
+        logo.getStyle().set("cursor", "pointer");
  
-        Button logoutBtn = new Button("Güvenli Çıkış", VaadinIcon.SIGN_OUT.create());
-        logoutBtn.addThemeVariants(ButtonVariant.LUMO_ERROR, ButtonVariant.LUMO_TERTIARY);
+        // Kullanıcı bilgisi
+        Span userInfo = new Span("Hoş geldin, " + (activeUser != null ? activeUser : "Misafir")
+                + (isAdmin ? " (Admin)" : ""));
+        userInfo.getStyle()
+        .set("color", "#6B4C11")  // logonun altın kahverengisi
+        .set("font-family", "'Lato', sans-serif")
+        .set("font-size", "0.95rem");
+ 
+        Button logoutBtn = new Button("Çıkış", VaadinIcon.SIGN_OUT.create());
+        logoutBtn.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
+        logoutBtn.getStyle()
+        .set("color", "#6B4C11")
+        .set("border", "1px solid #6B4C11");
         logoutBtn.addClickListener(e -> {
-            // Clear session and go back to login
             VaadinSession.getCurrent().getSession().invalidate();
             UI.getCurrent().navigate("login");
         });
  
-        header.add(welcomeText);
-        header.expand(welcomeText);
+        header.add(logo, userInfo);
+        header.expand(userInfo);
         header.add(logoutBtn);
         add(header);
  
-        // --- ADMIN TOOLBAR ---
-        // Only shown when the logged-in user has ADMIN role
+        // -------------------------------------------------------
+        // CONTENT AREA
+        // -------------------------------------------------------
+        VerticalLayout content = new VerticalLayout();
+        content.setSizeFull();
+        content.getStyle().set("padding", "20px");
+ 
+        // -------------------------------------------------------
+        // TAB BUTTONS (only for members)
+        // -------------------------------------------------------
+        VerticalLayout catalogSection  = new VerticalLayout();
+        VerticalLayout borrowedSection = new VerticalLayout();
+        borrowedSection.setVisible(false);
+ 
+        if (!isAdmin) {
+            Button catalogTab  = new Button("📚 Katalog");
+            Button borrowedTab = new Button("📖 Ödünç Aldıklarım");
+ 
+            catalogTab.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+ 
+            catalogTab.addClickListener(e -> {
+                catalogSection.setVisible(true);
+                borrowedSection.setVisible(false);
+                catalogTab.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+                borrowedTab.removeThemeVariants(ButtonVariant.LUMO_PRIMARY);
+            });
+ 
+            borrowedTab.addClickListener(e -> {
+                catalogSection.setVisible(false);
+                borrowedSection.setVisible(true);
+                borrowedTab.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+                catalogTab.removeThemeVariants(ButtonVariant.LUMO_PRIMARY);
+                refreshBorrowedSection(borrowedSection, userId);
+            });
+ 
+            HorizontalLayout tabs = new HorizontalLayout(catalogTab, borrowedTab);
+            tabs.getStyle().set("margin-bottom", "12px");
+            content.add(tabs);
+        }
+ 
+        // -------------------------------------------------------
+        // ADMIN TOOLBAR
+        // -------------------------------------------------------
         if (isAdmin) {
             Button addBtn    = new Button("Yeni Kitap Ekle", VaadinIcon.PLUS.create());
             Button deleteBtn = new Button("Seçileni Sil", VaadinIcon.TRASH.create());
@@ -81,22 +132,23 @@ public class LibraryCatalogView extends VerticalLayout implements BeforeEnterObs
             deleteBtn.addThemeVariants(ButtonVariant.LUMO_ERROR);
  
             HorizontalLayout adminActions = new HorizontalLayout(addBtn, deleteBtn);
-            add(adminActions);
+            adminActions.getStyle().set("margin-bottom", "12px");
+            content.add(adminActions);
  
-            // Delete selected item from database
+            Grid<LibraryItem> catalogGrid = buildCatalogGrid(isAdmin, userId);
+ 
             deleteBtn.addClickListener(e -> {
-                grid.asSingleSelect().getOptionalValue().ifPresent(selectedItem -> {
-                    manager.deleteItem(selectedItem.getId()); // Delete from database
-                    items = manager.getAllItems();            // Refresh from database
-                    grid.setItems(items);
+                catalogGrid.asSingleSelect().getOptionalValue().ifPresent(selectedItem -> {
+                    manager.deleteItem(selectedItem.getId());
+                    items = manager.getAllItems();
+                    catalogGrid.setItems(items);
                     Notification.show(selectedItem.getTitle() + " sistemden kaldırıldı.");
                 });
-                if (grid.asSingleSelect().isEmpty()) {
+                if (catalogGrid.asSingleSelect().isEmpty()) {
                     Notification.show("Lütfen silmek istediğiniz kitabı tablodan seçin!");
                 }
             });
  
-            // Add new book via dialog
             addBtn.addClickListener(e -> {
                 Dialog dialog = new Dialog();
                 dialog.setHeaderTitle("Yeni Kitap Ekle");
@@ -111,26 +163,13 @@ public class LibraryCatalogView extends VerticalLayout implements BeforeEnterObs
                 Button saveBtn = new Button("Kaydet", saveEvt -> {
                     try {
                         int year = Integer.parseInt(yearIn.getValue());
- 
-                        // Create a temporary Book object to pass to the DAO
-                        Book newBook = new Book(
-                            0,                      // ID will be assigned by the database
-                            titleIn.getValue(),
-                            authIn.getValue(),
-                            year,
-                            1,
-                            "Available",
-                            isbnIn.getValue(),
-                            100,
-                            "General"
-                        );
- 
-                        manager.addItem(newBook);       // Save to database
-                        items = manager.getAllItems();   // Refresh list from database
-                        grid.setItems(items);
+                        Book newBook = new Book(0, titleIn.getValue(), authIn.getValue(),
+                                year, 1, "Available", isbnIn.getValue(), 100, "General");
+                        manager.addItem(newBook);
+                        items = manager.getAllItems();
+                        catalogGrid.setItems(items);
                         dialog.close();
                         Notification.show("Yeni kitap başarıyla eklendi!");
- 
                     } catch (Exception ex) {
                         Notification.show("Hata: Geçersiz veri girişi!");
                     }
@@ -140,35 +179,92 @@ public class LibraryCatalogView extends VerticalLayout implements BeforeEnterObs
                 dialog.getFooter().add(new Button("İptal", i -> dialog.close()), saveBtn);
                 dialog.open();
             });
+ 
+            TextField searchField = buildSearchField(catalogGrid);
+            content.add(searchField, catalogGrid);
+ 
+        } else {
+            Grid<LibraryItem> catalogGrid = buildCatalogGrid(isAdmin, userId);
+            TextField searchField = buildSearchField(catalogGrid);
+            catalogSection.add(new H4("📚 Kütüphane Kataloğu"), searchField, catalogGrid);
+            content.add(catalogSection);
+ 
+            refreshBorrowedSection(borrowedSection, userId);
+            content.add(borrowedSection);
         }
  
-        // Search bar
-        TextField searchField = new TextField("Katalogda Ara...");
-        searchField.setPlaceholder("Kitap adı veya yazar...");
-        searchField.setWidthFull();
-        searchField.setPrefixComponent(VaadinIcon.SEARCH.create());
+        add(content);
+    }
  
-        searchField.addValueChangeListener(event -> {
-            String filtre = event.getValue().toLowerCase();
-            grid.setItems(items.stream()
-                .filter(item ->
-                    item.getTitle().toLowerCase().contains(filtre) ||
-                    item.getAuthor().toLowerCase().contains(filtre)
-                )
-                .toList());
-        });
+    private void refreshBorrowedSection(VerticalLayout section, Integer userId) {
+        section.removeAll();
+        section.add(new H4("📖 Ödünç Aldıklarım"));
  
-        // --- BORROW BUTTONS (only for members) ---
+        if (userId == null) {
+            section.add(new Span("Oturum hatası!"));
+            return;
+        }
+ 
+        List<String> borrowedItems = borrowDAO.getActiveBorrowsByUser(userId);
+ 
+        if (borrowedItems.isEmpty()) {
+            section.add(new Span("Şu an ödünç aldığınız kitap bulunmuyor."));
+            return;
+        }
+ 
+        Grid<String> borrowedGrid = new Grid<>();
+        borrowedGrid.setHeight("300px");
+        borrowedGrid.addColumn(s -> s.split("\\|")[1].trim()).setHeader("Kitap Adı");
+        borrowedGrid.addColumn(s -> s.split("\\|")[2].trim()).setHeader("İade Tarihi");
+ 
+        borrowedGrid.addComponentColumn(record -> {
+            Button returnBtn = new Button("İade Et", VaadinIcon.ARROW_BACKWARD.create());
+            returnBtn.addThemeVariants(ButtonVariant.LUMO_SUCCESS);
+ 
+            returnBtn.addClickListener(e -> {
+                try {
+                    String recordIdStr = record.split("\\|")[0].replace("Record #", "").trim();
+                    int recordId = Integer.parseInt(recordIdStr);
+ 
+                    BorrowDAO dao = new BorrowDAO();
+                    boolean success = dao.returnItemSimple(recordId);
+ 
+                    if (success) {
+                        Notification.show("Kitap başarıyla iade edildi!", 3000, Notification.Position.TOP_CENTER);
+                        refreshBorrowedSection(section, userId);
+                    } else {
+                        Notification.show("İade işlemi başarısız!");
+                    }
+                } catch (Exception ex) {
+                    Notification.show("Hata: " + ex.getMessage());
+                }
+            });
+ 
+            return returnBtn;
+        }).setHeader("İşlem");
+ 
+        borrowedGrid.setItems(borrowedItems);
+        section.add(borrowedGrid);
+    }
+ 
+    private Grid<LibraryItem> buildCatalogGrid(boolean isAdmin, Integer userId) {
+        Grid<LibraryItem> grid = new Grid<>(LibraryItem.class, false);
+        grid.addColumn(LibraryItem::getTitle).setHeader("Kitap Adı");
+        grid.addColumn(LibraryItem::getAuthor).setHeader("Yazar");
+        grid.addColumn(LibraryItem::getPublicationYear).setHeader("Yayın Yılı");
+        grid.addColumn(LibraryItem::getStatus).setHeader("Durum");
+        grid.addColumn(item -> item.getClass().getSimpleName()).setHeader("Tür");
+        grid.setItems(items);
+        grid.setHeight("400px");
+ 
         if (!isAdmin) {
             grid.addComponentColumn(item -> {
                 Button borrowBtn = new Button("Ödünç Al");
  
-                // Disable button for digital items
                 if (item instanceof EBook || item instanceof AudioBook) {
                     borrowBtn.setText("Dijital Ürün");
                     borrowBtn.setEnabled(false);
                 } else if (item.getCopyCount() <= 0) {
-                    // No copies available
                     borrowBtn.setText("Stokta Yok");
                     borrowBtn.setEnabled(false);
                     borrowBtn.addThemeVariants(ButtonVariant.LUMO_ERROR);
@@ -176,25 +272,17 @@ public class LibraryCatalogView extends VerticalLayout implements BeforeEnterObs
  
                 borrowBtn.addClickListener(e -> {
                     if (userId == null) {
-                        Notification.show("Oturum hatası, lütfen tekrar giriş yapın!");
+                        Notification.show("Oturum hatası!");
                         return;
                     }
- 
-                    // Check if already borrowed by this user
-                    BorrowDAO borrowDAO = new BorrowDAO();
                     if (borrowDAO.isItemBorrowedByUser(userId, item.getId())) {
                         Notification.show("Bu kitabı zaten ödünç aldınız!");
                         return;
                     }
- 
-                    // Save borrow to database
                     boolean success = borrowDAO.borrowItem(userId, item.getId());
- 
                     if (success) {
                         Notification.show(item.getTitle() + " başarıyla ödünç alındı!", 3000, Notification.Position.TOP_CENTER);
-                        // Refresh list from database to show updated stock
-                        items = manager.getAllItems();
-                        grid.setItems(items);
+                        UI.getCurrent().navigate("katalog");
                     } else {
                         Notification.show("Ödünç alma işlemi başarısız!");
                     }
@@ -204,10 +292,25 @@ public class LibraryCatalogView extends VerticalLayout implements BeforeEnterObs
             }).setHeader("İşlemler");
         }
  
-        add(searchField, grid);
+        return grid;
     }
  
-    // Redirect to login if not logged in
+    private TextField buildSearchField(Grid<LibraryItem> grid) {
+        TextField searchField = new TextField("Katalogda Ara...");
+        searchField.setPlaceholder("Kitap adı veya yazar...");
+        searchField.setWidthFull();
+        searchField.setPrefixComponent(VaadinIcon.SEARCH.create());
+        searchField.addValueChangeListener(event -> {
+            String filtre = event.getValue().toLowerCase();
+            grid.setItems(items.stream()
+                .filter(item ->
+                    item.getTitle().toLowerCase().contains(filtre) ||
+                    item.getAuthor().toLowerCase().contains(filtre))
+                .toList());
+        });
+        return searchField;
+    }
+ 
     @Override
     public void beforeEnter(BeforeEnterEvent event) {
         Object role = VaadinSession.getCurrent().getAttribute("role");
@@ -217,3 +320,4 @@ public class LibraryCatalogView extends VerticalLayout implements BeforeEnterObs
         }
     }
 }
+ 

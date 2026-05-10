@@ -1,0 +1,149 @@
+/* ============================================================
+   Libris - Global Theme
+   Soft, warm library aesthetic inspired by the logo
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Lato:wght@300;400;700&display=swap');
+
+/* -------------------------------------------------------
+   ROOT VARIABLES
+   ------------------------------------------------------- */
+html {
+    --libris-cream:       #FAF6EF;
+    --libris-gold:        #C4973A;
+    --libris-dark-gold:   #7A5520;
+    --libris-brown:       #4A3010;
+    --libris-light:       #FDFAF5;
+    --libris-border:      #E0D0B0;
+    --libris-hover:       #F0E8D5;
+
+    background-color: var(--libris-cream) !important;
+    font-family: 'Lato', sans-serif;
+    color: var(--libris-brown);
+}
+
+body {
+    background-color: var(--libris-cream) !important;
+}
+
+/* -------------------------------------------------------
+   HEADINGS
+   ------------------------------------------------------- */
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Playfair Display', serif;
+    color: var(--libris-brown);
+    font-weight: 600;
+}
+
+/* -------------------------------------------------------
+   BUTTONS — Primary
+   ------------------------------------------------------- */
+vaadin-button[theme~="primary"] {
+    background-color: var(--libris-dark-gold) !important;
+    color: #FDF8F0 !important;
+    border-radius: 8px;
+    font-family: 'Lato', sans-serif;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    box-shadow: 0 2px 6px rgba(122, 85, 32, 0.2);
+    transition: background-color 0.2s ease;
+}
+
+vaadin-button[theme~="primary"]:hover {
+    background-color: var(--libris-brown) !important;
+}
+
+/* -------------------------------------------------------
+   BUTTONS — Success (İade Et)
+   ------------------------------------------------------- */
+vaadin-button[theme~="success"] {
+    background-color: #5A8A6A !important;
+    color: white !important;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(90, 138, 106, 0.2);
+}
+
+/* -------------------------------------------------------
+   BUTTONS — Error
+   ------------------------------------------------------- */
+vaadin-button[theme~="error"] {
+    border-radius: 8px;
+}
+
+/* -------------------------------------------------------
+   TEXT FIELDS & INPUTS
+   ------------------------------------------------------- */
+vaadin-text-field::part(input-field),
+vaadin-password-field::part(input-field) {
+    background-color: var(--libris-light);
+    border: 1px solid var(--libris-border);
+    border-radius: 8px;
+}
+
+vaadin-text-field[focused]::part(input-field),
+vaadin-password-field[focused]::part(input-field) {
+    border-color: var(--libris-gold);
+    box-shadow: 0 0 0 2px rgba(196, 151, 58, 0.15);
+}
+
+/* -------------------------------------------------------
+   GRID (TABLE)
+   ------------------------------------------------------- */
+vaadin-grid {
+    background-color: var(--libris-light) !important;
+    border: 1px solid var(--libris-border) !important;
+    border-radius: 10px;
+    font-family: 'Lato', sans-serif;
+    box-shadow: 0 2px 12px rgba(74, 48, 16, 0.08);
+    overflow: hidden;
+}
+
+vaadin-grid-cell-content {
+    color: var(--libris-brown);
+    font-size: 0.9rem;
+}
+
+vaadin-grid::part(header-cell) {
+    background-color: var(--libris-dark-gold) !important;
+    color: #FDF8F0 !important;
+    font-family: 'Lato', sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+vaadin-grid::part(row):hover {
+    background-color: var(--libris-hover) !important;
+    cursor: pointer;
+}
+
+vaadin-grid::part(row):nth-child(even) {
+    background-color: #F7F2E8;
+}
+
+/* -------------------------------------------------------
+   NOTIFICATIONS
+   ------------------------------------------------------- */
+vaadin-notification-card {
+    background-color: var(--libris-dark-gold) !important;
+    color: #FDF8F0 !important;
+    border-radius: 10px;
+    font-family: 'Lato', sans-serif;
+    box-shadow: 0 4px 16px rgba(74, 48, 16, 0.2);
+}
+
+/* -------------------------------------------------------
+   DIALOG (popup)
+   ------------------------------------------------------- */
+vaadin-dialog-overlay::part(overlay) {
+    background-color: var(--libris-light) !important;
+    border: 1px solid var(--libris-border);
+    border-radius: 14px;
+    box-shadow: 0 8px 32px rgba(74, 48, 16, 0.15);
+}
+
+vaadin-dialog-overlay::part(title) {
+    font-family: 'Playfair Display', serif;
+    color: var(--libris-brown);
+}
